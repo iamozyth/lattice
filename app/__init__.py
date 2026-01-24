@@ -1,10 +1,11 @@
 import os
 import time
 import logging
-from flask import Flask
+from flask import Flask, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask_login import LoginManager
+from flask_openapi3 import OpenAPI
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -16,9 +17,25 @@ def create_app():
     # Get the directory where this file is located
     basedir = os.path.abspath(os.path.dirname(__file__))
     
-    app = Flask(__name__,
-                static_folder=os.path.join(basedir, 'static'),
-                template_folder=os.path.join(basedir, 'templates'))
+    # Use OpenAPI instead of Flask for automatic OpenAPI 3.0 spec generation
+    app = OpenAPI(
+        __name__,
+        info={
+            'title': 'NetDoc IPAM API',
+            'version': '2.0.0',
+            'description': 'IP Address Management System API Documentation',
+            'contact': {
+                'name': 'NetDoc IPAM Support',
+            }
+        }
+    )
+    
+    # Enable OpenAPI spec generation
+    app.config['OPENAPI_SPEC_PATH'] = '/openapi/openapi.json'
+    
+    # Configure Flask app
+    app.static_folder = os.path.join(basedir, 'static')
+    app.template_folder = os.path.join(basedir, 'templates')
     
     # Configuration
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
@@ -34,12 +51,23 @@ def create_app():
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
     
+    # For API requests, return JSON 401 instead of redirect loops
+    @login_manager.unauthorized_handler
+    def unauthorized():
+        if request.path.startswith('/api/'):
+            return {'error': 'Unauthorized'}, 401
+        return redirect(url_for('auth.login'))
+    
     # Register blueprints
     from app.routes import api_bp, main_bp
     from app.auth import auth_bp
-    app.register_blueprint(api_bp)
+    
+    # Use register_api for APIBlueprints (not register_blueprint)
+    app.register_api(api_bp)
+    app.register_api(auth_bp)
+    
+    # Use register_blueprint for standard Flask blueprints
     app.register_blueprint(main_bp)
-    app.register_blueprint(auth_bp)
     
     # Create tables with retry logic
     with app.app_context():

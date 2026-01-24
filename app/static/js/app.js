@@ -42,8 +42,86 @@ function isModalVisible(elementId) {
 // Authentication
 // ============================================================================
 
+async function checkPasswordStrength(fieldId) {
+    const password = document.getElementById(fieldId).value;
+    const strengthContainerId = `${fieldId}Strength`;
+    
+    // Hide if empty
+    if (password.length === 0) {
+        document.getElementById(strengthContainerId).classList.add('hidden');
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/auth/check-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password })
+        });
+        
+        const data = await res.json();
+        
+        // Show strength indicator
+        document.getElementById(strengthContainerId).classList.remove('hidden');
+        
+        // Update progress bar
+        const barId = `${fieldId}Bar`;
+        const bar = document.getElementById(barId);
+        const percentage = Math.min((data.score / 10) * 100, 100);
+        bar.style.width = percentage + '%';
+        bar.style.backgroundColor = data.color;
+        
+        // Update strength level text
+        document.getElementById(`${fieldId}Level`).textContent = data.strength;
+        document.getElementById(`${fieldId}Level`).style.color = data.color;
+        
+        // Update message
+        document.getElementById(`${fieldId}Message`).textContent = data.message;
+        document.getElementById(`${fieldId}Message`).style.color = data.color;
+        
+        // Update requirements
+        const prefix = fieldId.replace('Password', '').charAt(0).toUpperCase() + fieldId.replace('Password', '').slice(1);
+        const reqPrefix = fieldId === 'setupPassword' ? 'setupReq' : 'req';
+        
+        updateRequirement(`${reqPrefix}Length`, data.requirements.length);
+        updateRequirement(`${reqPrefix}Uppercase`, data.requirements.uppercase);
+        updateRequirement(`${reqPrefix}Lowercase`, data.requirements.lowercase);
+        updateRequirement(`${reqPrefix}Numbers`, data.requirements.numbers);
+        updateRequirement(`${reqPrefix}Special`, data.requirements.special);
+        
+    } catch (error) {
+        console.error('Password strength check error:', error);
+    }
+}
+
+function updateRequirement(elementId, met) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    
+    if (met) {
+        el.textContent = '✓';
+        el.style.color = '#10b981';
+    } else {
+        el.textContent = '✗';
+        el.style.color = '#9ca3af';
+    }
+}
+
 async function checkAuthStatus() {
     try {
+        console.log('[Auth] Checking setup status...');
+        // First check if system needs setup
+        const setupRes = await fetch('/api/auth/setup-status');
+        const setupData = await setupRes.json();
+        console.log('[Auth] Setup status:', setupData);
+        
+        if (setupData.needs_setup) {
+            console.log('[Auth] System needs initial setup');
+            showModal('setupModal');
+            return false;
+        }
+        
+        // System is set up, check authentication
         console.log('[Auth] Checking authentication status...');
         const res = await fetch('/api/auth/health');
         const data = await res.json();
@@ -55,6 +133,7 @@ async function checkAuthStatus() {
             // User is logged in, hide login modal
             hideModal('loginModal');
             hideModal('registerModal');
+            hideModal('setupModal');
             document.body.style.pointerEvents = 'auto';
             return true;
         } else {
@@ -164,6 +243,48 @@ async function handleLogout() {
     } catch (error) {
         console.error('Logout error:', error);
         showToast('Logout failed', 'error');
+    }
+}
+
+async function handleSetup(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('setupUsername').value;
+    const email = document.getElementById('setupEmail').value;
+    const password = document.getElementById('setupPassword').value;
+    const confirmPassword = document.getElementById('setupConfirmPassword').value;
+    
+    if (password !== confirmPassword) {
+        showToast('Passwords do not match', 'error');
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/auth/setup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, email, password })
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok) {
+            showToast(data.error || 'Setup failed', 'error');
+            return;
+        }
+        
+        // Setup complete, auto-login
+        if (data.user) {
+            currentUser = data.user;
+            hideModal('setupModal');
+            document.getElementById('setupForm').reset();
+            showToast('Admin account created successfully! Welcome to NetDoc IPAM!', 'success');
+            loadSubnets();
+            loadStats();
+        }
+    } catch (error) {
+        console.error('Setup error:', error);
+        showToast('Setup failed', 'error');
     }
 }
 
@@ -277,7 +398,9 @@ function loadAdminUsers() {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return response.json();
     })
-    .then(users => {
+    .then(data => {
+        // Handle the response which wraps users in a 'users' property
+        const users = data.users || data;
         const usersList = document.getElementById('adminUsersList');
         if (!users || users.length === 0) {
             usersList.innerHTML = '<p class="text-gray-400 text-center py-4">No users found</p>';
@@ -552,7 +675,17 @@ async function loadSubnets() {
         
         console.log('[Subnets] Fetching from /api/subnets?', params.toString());
         const response = await fetch(`/api/subnets?${params}`);
-        console.log('[Subnets] Response status:', response.status);
+        console.log('[Subnets] Response status:', response.status, 'redirected:', response.redirected);
+        
+        const contentType = response.headers.get('content-type') || '';
+        const looksJson = contentType.includes('application/json');
+        
+        if (response.status === 401 || response.status === 403 || response.redirected || !looksJson) {
+            // Likely not authenticated anymore; show login modal and stop.
+            console.warn('[Subnets] Not authorized or redirected, showing login modal');
+            showModal('loginModal');
+            throw new Error('Not authenticated. Please log in.');
+        }
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -567,7 +700,7 @@ async function loadSubnets() {
         document.getElementById('subnetsContainer').innerHTML = `
             <div class="col-span-full text-center py-12 text-red-500">
                 <i class="fas fa-exclamation-triangle text-3xl mb-3"></i>
-                <p>Error loading subnets: ${error.message}</p>
+                <p>Error loading subnets: ${escapeHtml(error.message || 'Unknown error')}</p>
             </div>
         `;
     }

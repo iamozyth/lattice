@@ -50,14 +50,21 @@ git clone <repository-url> netdoc-ipam
 cd netdoc-ipam
 ```
 
-2. Start the application:
+2. Copy the environment template and set credentials (never commit the real .env):
+```bash
+cp .env.example .env
+# edit .env with strong, org-approved values
+# generate a fresh password: openssl rand -base64 24
+```
+
+3. Start the application:
 ```bash
 docker-compose up -d
 ```
 
-3. Open your browser: `http://localhost:5000`
+4. Open your browser: `http://localhost:5000`
 
-4. Start documenting your network!
+5. Start documenting your network!
 
 ### Stopping the Application
 
@@ -88,10 +95,16 @@ docker-compose up -d
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DATABASE_URL` | PostgreSQL connection | Full database connection string |
-| `FLASK_ENV` | production | Flask environment mode |
+All sensitive values are loaded from `.env` (see `.env.example`).
+
+| Variable | Default (from docker-compose) | Description |
+|----------|------------------------------|-------------|
+| `POSTGRES_USER` | `netdoc_service` | Database role used by the app |
+| `POSTGRES_PASSWORD` | `u4Jz9qT!sV@1fX8pN2rL0wC5` | Random strong placeholder (replace per deployment) |
+| `POSTGRES_DB` | `netdoc_prod` | Database name |
+| `DATABASE_URL` | `postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@ipam-db:5432/${POSTGRES_DB}` | Full connection string consumed by the app |
+| `FLASK_ENV` | `production` | Flask environment mode |
+| `FLASK_RUN_HOST` | `0.0.0.0` | Bind address inside the container |
 
 ## 🔌 API Reference
 
@@ -223,6 +236,7 @@ docker-compose build --no-cache
 - Use environment variables for sensitive configuration
 - Consider placing behind a reverse proxy with HTTPS
 - Implement authentication for production deployments
+- Store secrets only in `.env` (never commit it) and rotate the database password regularly
 
 ## 📊 Version History
 

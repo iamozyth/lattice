@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request, render_template, send_from_directory, current_app
 from flask_login import login_required, current_user
+from flask_openapi3 import APIBlueprint, Tag
 from app import db
 from app.models import Subnet, IP, ip_sort_key
 from app.scanner import NetworkScanner, scan_jobs
@@ -14,15 +15,26 @@ import logging
 logger = logging.getLogger(__name__)
 scanner = NetworkScanner()
 
-api_bp = Blueprint('api', __name__, url_prefix='/api')
+api_bp = APIBlueprint('api', __name__, url_prefix='/api')
 main_bp = Blueprint('main', __name__)
+
+# ============================================================================
+# API Tags for Swagger Organization
+# ============================================================================
+tag_stats = Tag(name='Statistics', description='Dashboard statistics')
+tag_subnets = Tag(name='Subnets', description='Subnet management operations')
+tag_ips = Tag(name='IPs', description='IP address management')
+tag_import_export = Tag(name='Import/Export', description='Data import and export')
+tag_lookup = Tag(name='IP Lookup', description='IP address lookup utilities')
+tag_metadata = Tag(name='Metadata', description='Metadata and enumerations')
+tag_scanner = Tag(name='Network Scanner', description='Network scanning operations')
 
 
 # ============================================================================
 # Dashboard / Statistics
 # ============================================================================
 
-@api_bp.route('/stats', methods=['GET'])
+@api_bp.get('/stats', tags=[tag_stats])
 @login_required
 def get_stats():
     """Get dashboard statistics"""
@@ -70,7 +82,7 @@ def get_stats():
 # Subnet Routes
 # ============================================================================
 
-@api_bp.route('/subnets', methods=['GET'])
+@api_bp.get('/subnets', tags=[tag_subnets])
 @login_required
 def get_subnets():
     """Get all subnets with optional filtering"""
@@ -121,14 +133,14 @@ def get_subnets():
     return jsonify([subnet.to_dict() for subnet in subnets])
 
 
-@api_bp.route('/subnets/<int:id>', methods=['GET'])
+@api_bp.get('/subnets/<int:id>', tags=[tag_subnets])
 def get_subnet(id):
     """Get a specific subnet with its IPs"""
     subnet = Subnet.query.get_or_404(id)
     return jsonify(subnet.to_dict(include_ips=True))
 
 
-@api_bp.route('/subnets/<int:id>/available-ips', methods=['GET'])
+@api_bp.get('/subnets/<int:id>/available-ips', tags=[tag_subnets])
 def get_available_ips(id):
     """Get available IPs in a subnet"""
     subnet = Subnet.query.get_or_404(id)
@@ -140,7 +152,7 @@ def get_available_ips(id):
     })
 
 
-@api_bp.route('/subnets', methods=['POST'])
+@api_bp.post('/subnets', tags=[tag_subnets])
 def create_subnet():
     """Create a new subnet"""
     try:
@@ -193,7 +205,7 @@ def create_subnet():
         return jsonify({'error': str(e)}), 400
 
 
-@api_bp.route('/subnets/<int:id>', methods=['PUT'])
+@api_bp.put('/subnets/<int:id>', tags=[tag_subnets])
 def update_subnet(id):
     """Update a subnet"""
     try:
@@ -241,7 +253,7 @@ def update_subnet(id):
         return jsonify({'error': str(e)}), 400
 
 
-@api_bp.route('/subnets/<int:id>', methods=['DELETE'])
+@api_bp.delete('/subnets/<int:id>', tags=[tag_subnets])
 def delete_subnet(id):
     """Delete a subnet and all associated IPs"""
     try:
@@ -258,7 +270,7 @@ def delete_subnet(id):
 # IP Routes
 # ============================================================================
 
-@api_bp.route('/ips', methods=['GET'])
+@api_bp.get('/ips', tags=[tag_ips])
 def get_ips():
     """Get all IPs with optional filtering"""
     subnet_id = request.args.get('subnet_id')
@@ -295,14 +307,14 @@ def get_ips():
     return jsonify(ips_data)
 
 
-@api_bp.route('/ips/<int:id>', methods=['GET'])
+@api_bp.get('/ips/<int:id>', tags=[tag_ips])
 def get_ip(id):
     """Get a specific IP"""
     ip = IP.query.get_or_404(id)
     return jsonify(ip.to_dict())
 
 
-@api_bp.route('/ips', methods=['POST'])
+@api_bp.post('/ips', tags=[tag_ips])
 def create_ip():
     """Create a new IP entry"""
     try:
@@ -377,7 +389,7 @@ def create_ip():
         return jsonify({'error': str(e)}), 400
 
 
-@api_bp.route('/ips/<int:id>', methods=['PUT'])
+@api_bp.put('/ips/<int:id>', tags=[tag_ips])
 def update_ip(id):
     """Update an IP entry"""
     try:
@@ -440,7 +452,7 @@ def update_ip(id):
         return jsonify({'error': str(e)}), 400
 
 
-@api_bp.route('/ips/<int:id>', methods=['DELETE'])
+@api_bp.delete('/ips/<int:id>', tags=[tag_ips])
 def delete_ip(id):
     """Delete an IP entry"""
     try:
@@ -457,7 +469,7 @@ def delete_ip(id):
 # Bulk Operations
 # ============================================================================
 
-@api_bp.route('/ips/bulk', methods=['POST'])
+@api_bp.post('/ips/bulk', tags=[tag_ips])
 def bulk_create_ips():
     """Create multiple IPs at once"""
     try:
@@ -535,7 +547,7 @@ def bulk_create_ips():
 # Export / Import
 # ============================================================================
 
-@api_bp.route('/export', methods=['GET'])
+@api_bp.get('/export', tags=[tag_import_export])
 def export_data():
     """Export all data as JSON"""
     subnets = Subnet.query.all()
@@ -549,7 +561,7 @@ def export_data():
     return jsonify(export_data)
 
 
-@api_bp.route('/import', methods=['POST'])
+@api_bp.post('/import', tags=[tag_import_export])
 def import_data():
     """Import data from JSON"""
     try:
@@ -647,7 +659,7 @@ def import_data():
 # Lookup Endpoints
 # ============================================================================
 
-@api_bp.route('/lookup/ip/<ip_address>', methods=['GET'])
+@api_bp.get('/lookup/ip/<ip_address>', tags=[tag_lookup])
 def lookup_ip(ip_address):
     """Find which subnet an IP belongs to"""
     try:
@@ -675,14 +687,14 @@ def lookup_ip(ip_address):
     })
 
 
-@api_bp.route('/environments', methods=['GET'])
+@api_bp.get('/environments', tags=[tag_metadata])
 def get_environments():
     """Get list of all environments"""
     envs = db.session.query(Subnet.environment).distinct().all()
     return jsonify([env[0] for env in envs if env[0]])
 
 
-@api_bp.route('/device-types', methods=['GET'])
+@api_bp.get('/device-types', tags=[tag_metadata])
 def get_device_types():
     """Get list of all device types"""
     types = db.session.query(IP.device_type).distinct().all()
@@ -713,7 +725,7 @@ def serve_css(filename):
 # Network Scanning Routes
 # ============================================================================
 
-@api_bp.route('/scanner/status', methods=['GET'])
+@api_bp.get('/scanner/status', tags=[tag_scanner])
 def scanner_status():
     """Check if network scanner is available"""
     return jsonify({
@@ -722,7 +734,7 @@ def scanner_status():
     })
 
 
-@api_bp.route('/scanner/scan-subnet/<int:subnet_id>', methods=['POST'])
+@api_bp.post('/scanner/scan-subnet/<int:subnet_id>', tags=[tag_scanner])
 def scan_subnet(subnet_id):
     """
     Scan a subnet for live hosts
@@ -771,7 +783,7 @@ def scan_subnet(subnet_id):
         return jsonify({'error': str(e)}), 500
 
 
-@api_bp.route('/scanner/scan-subnet/<int:subnet_id>/start', methods=['POST'])
+@api_bp.post('/scanner/scan-subnet/<int:subnet_id>/start', tags=[tag_scanner])
 def scan_subnet_start(subnet_id):
     """Start an asynchronous subnet scan and return a job id"""
     if not scanner.is_available():
@@ -798,7 +810,7 @@ def scan_subnet_start(subnet_id):
         return jsonify({'error': str(e)}), 500
 
 
-@api_bp.route('/scanner/scan-jobs/<string:job_id>', methods=['GET'])
+@api_bp.get('/scanner/scan-jobs/<string:job_id>', tags=[tag_scanner])
 def scan_job_status(job_id):
     """Get the current status, logs, and partial results for a scan job"""
     job = scan_jobs.get_job(job_id)
@@ -819,7 +831,7 @@ def scan_job_status(job_id):
     })
 
 
-@api_bp.route('/scanner/bulk-import', methods=['POST'])
+@api_bp.post('/scanner/bulk-import', tags=[tag_scanner])
 def bulk_import_ips():
     """
     Bulk import recommended IPs from scan results
@@ -906,7 +918,7 @@ def bulk_import_ips():
     }), 201
 
 
-@api_bp.route('/scanner/verify/<int:subnet_id>', methods=['POST'])
+@api_bp.post('/scanner/verify/<int:subnet_id>', tags=[tag_scanner])
 def verify_subnet(subnet_id):
     """
     Verify status of all IPs in a subnet
@@ -945,7 +957,7 @@ def verify_subnet(subnet_id):
         return jsonify({'error': str(e)}), 500
 
 
-@api_bp.route('/scanner/verify-ip', methods=['POST'])
+@api_bp.post('/scanner/verify-ip', tags=[tag_scanner])
 def verify_ip():
     """
     Verify status of a single IP

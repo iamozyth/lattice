@@ -2,16 +2,18 @@ services:
   ipam-db:
     image: postgres:15-alpine
     container_name: ipam-db
+    env_file:
+      - .env
     environment:
-      - POSTGRES_USER=ipam_user
-      - POSTGRES_PASSWORD=ipam_secure_pass
-      - POSTGRES_DB=ipam_db
+      POSTGRES_USER: ${POSTGRES_USER:-netdoc_service}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-u4Jz9qT!sV@1fX8pN2rL0wC5}
+      POSTGRES_DB: ${POSTGRES_DB:-netdoc_prod}
     volumes:
       - ipam_db_data:/var/lib/postgresql/data
     networks:
       - ipam-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ipam_user -d ipam_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-netdoc_service} -d ${POSTGRES_DB:-netdoc_prod}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -24,10 +26,12 @@ services:
     container_name: ipam-web
     ports:
       - "0.0.0.0:5001:5000"
+    env_file:
+      - .env
     environment:
-      - FLASK_ENV=production
-      - FLASK_RUN_HOST=0.0.0.0
-      - DATABASE_URL=postgresql://ipam_user:ipam_secure_pass@ipam-db:5432/ipam_db
+      FLASK_ENV: ${FLASK_ENV:-production}
+      FLASK_RUN_HOST: 0.0.0.0
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-netdoc_service}:${POSTGRES_PASSWORD:-u4Jz9qT!sV@1fX8pN2rL0wC5}@ipam-db:5432/${POSTGRES_DB:-netdoc_prod}}
     depends_on:
       ipam-db:
         condition: service_healthy
@@ -43,7 +47,9 @@ services:
 
 volumes:
   ipam_db_data:
+    name: ipam-db-data
 
 networks:
   ipam-network:
+    name: ipam-network
     driver: bridge

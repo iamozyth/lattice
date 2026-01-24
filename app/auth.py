@@ -1,15 +1,197 @@
 """
 Authentication routes for NetDoc IPAM
 """
-from flask import Blueprint, request, jsonify
+from flask import request
 from flask_login import login_user, logout_user, login_required, current_user
+from flask_openapi3 import APIBlueprint, Tag
+from pydantic import BaseModel, EmailStr, Field
 from app import db
 from app.models import User
 from functools import wraps
 import os
+import re
 
-auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+auth_bp = APIBlueprint('auth', __name__, url_prefix='/api/auth')
 
+# ============================================================================
+# API Tags for Swagger Organization
+# ============================================================================
+tag_auth = Tag(name='Authentication', description='User authentication and management')
+
+# ============================================================================
+# Password Strength Checker
+# ============================================================================
+def check_password_strength(password: str):
+    """
+    Analyze password strength and return detailed feedback
+    Returns: (strength_score, feedback_dict)
+    """
+    feedback = {
+        'score': 0,
+        'strength': 'Very Weak',
+        'color': '#ef4444',
+        'message': '🤦 Come on, that\'s weaker than my WiFi password!',
+        'requirements': {
+            'length': len(password) >= 8,
+            'uppercase': bool(re.search(r'[A-Z]', password)),
+            'lowercase': bool(re.search(r'[a-z]', password)),
+            'numbers': bool(re.search(r'\d', password)),
+            'special': bool(re.search(r'[!@#$%^&*()_+\-=\[\]{};:\'",.<>?/`~\\|]', password))
+        }
+    }
+    
+    # Calculate score
+    score = sum([
+        min(len(password) // 4, 2),  # Max 2 points for length
+        2 if feedback['requirements']['uppercase'] else 0,
+        2 if feedback['requirements']['lowercase'] else 0,
+        2 if feedback['requirements']['numbers'] else 0,
+        2 if feedback['requirements']['special'] else 0
+    ])
+    
+    feedback['score'] = score
+    
+    # Assign strength levels with funny messages
+    if score < 2:
+        feedback['strength'] = 'Very Weak'
+        feedback['color'] = '#ef4444'
+        feedback['message'] = '🤦 Come on, that\'s weaker than my WiFi password!'
+    elif score < 4:
+        feedback['strength'] = 'Weak'
+        feedback['color'] = '#f97316'
+        feedback['message'] = '😴 Even my password manager is sleeping...'
+    elif score < 6:
+        feedback['strength'] = 'Fair'
+        feedback['color'] = '#eab308'
+        feedback['message'] = '🤔 Getting warmer, but I\'ve cracked easier ones'
+    elif score < 8:
+        feedback['strength'] = 'Good'
+        feedback['color'] = '#84cc16'
+        feedback['message'] = '👍 Now we\'re talking! Almost there!'
+    elif score < 10:
+        feedback['strength'] = 'Strong'
+        feedback['color'] = '#22c55e'
+        feedback['message'] = '💪 Very nice! Even hackers are impressed!'
+    else:
+        feedback['strength'] = 'Very Strong'
+        feedback['color'] = '#059669'
+        feedback['message'] = '🔐 NSA-approved! You\'re basically a security expert now!'
+    
+    return score, feedback
+
+
+# ============================================================================
+# Pydantic Models for Request/Response Validation
+# ============================================================================
+
+class SetupStatusResponse(BaseModel):
+    needs_setup: bool
+    user_count: int
+
+class SetupRequest(BaseModel):
+    username: str = Field(..., min_length=3, description="Username (min 3 chars)")
+    email: EmailStr = Field(..., description="Valid email address")
+    password: str = Field(..., min_length=8, description="Password (min 8 chars)")
+
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    email: str
+    is_admin: bool
+    is_active: bool
+
+class SetupResponse(BaseModel):
+    message: str
+    user: UserResponse
+
+class LoginRequest(BaseModel):
+    username: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=1)
+
+class LoginResponse(BaseModel):
+    success: bool
+    message: str
+    user: dict
+
+class RegisterRequest(BaseModel):
+    username: str = Field(..., min_length=3)
+    email: EmailStr = Field(...)
+    password: str = Field(..., min_length=8)
+
+class RegisterResponse(BaseModel):
+    success: bool
+    message: str
+    user: dict
+    is_first_user: bool
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8)
+
+class PasswordRequirement(BaseModel):
+    length: bool
+    uppercase: bool
+    lowercase: bool
+    numbers: bool
+    special: bool
+
+class PasswordStrengthResponse(BaseModel):
+    score: int
+    strength: str
+    color: str
+    message: str
+    requirements: PasswordRequirement
+
+class ErrorResponse(BaseModel):
+    authenticated: bool
+    user: dict = None
+
+class GetUsersResponse(BaseModel):
+    success: bool
+    users: list
+    total: int
+
+class CreateUserRequest(BaseModel):
+    username: str = Field(..., min_length=3)
+    email: EmailStr = Field(...)
+    password: str = Field(..., min_length=8)
+    is_admin: bool = False
+
+class CreateUserResponse(BaseModel):
+    success: bool
+    message: str
+    user: dict
+
+class UpdateUserRequest(BaseModel):
+    email: str = None
+    is_admin: bool = None
+    is_active: bool = None
+    password: str = None
+
+class UpdateUserResponse(BaseModel):
+    success: bool
+    message: str
+    user: dict
+
+class ToggleResponse(BaseModel):
+    success: bool
+    message: str
+    user: dict
+
+class ErrorResponse(BaseModel):
+    error: str
+
+class MessageResponse(BaseModel):
+    success: bool
+    message: str
+
+class AuthHealthResponse(BaseModel):
+    authenticated: bool
+    user: dict = None
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
 
 def admin_required(f):
     """Decorator to require admin role"""
@@ -21,26 +203,90 @@ def admin_required(f):
     return decorated_function
 
 
-@auth_bp.route('/register', methods=['POST'])
-def register():
-    """Register a new user (admin only or first user)"""
+@auth_bp.get('/setup-status', tags=[tag_auth],
+    responses={"200": SetupStatusResponse, "500": ErrorResponse}
+)
+def setup_status():
+    """Check if system needs initial setup"""
     try:
-        data = request.get_json()
+        user_count = User.query.count()
+        return {
+            'needs_setup': user_count == 0,
+            'user_count': user_count
+        }, 200
+    except Exception as e:
+        return {'error': f'Database error: {str(e)}'}, 500
+
+
+class CheckPasswordRequest(BaseModel):
+    password: str = Field(..., min_length=1, description="Password to check")
+
+
+@auth_bp.post('/check-password', tags=[tag_auth],
+    responses={"200": PasswordStrengthResponse}
+)
+def check_password(body: CheckPasswordRequest):
+    """Check password strength and get feedback"""
+    try:
+        score, feedback = check_password_strength(body.password)
+        return feedback, 200
+    except Exception as e:
+        return {'error': f'Error checking password: {str(e)}'}, 500
+
+
+@auth_bp.post('/setup', tags=[tag_auth],
+    responses={"201": SetupResponse, "400": ErrorResponse, "403": ErrorResponse, "500": ErrorResponse}
+)
+def setup(body: SetupRequest):
+    """Initialize system with first admin user"""
+    try:
+        # Check if system is already set up
+        if User.query.count() > 0:
+            return {'error': 'System is already set up'}, 403
         
-        # Validate input
-        if not data or not data.get('username') or not data.get('password') or not data.get('email'):
-            return {'error': 'Missing required fields'}, 400
+        username = body.username.strip()
+        email = body.email.strip()
+        password = body.password
         
-        username = data.get('username', '').strip()
-        email = data.get('email', '').strip()
-        password = data.get('password', '')
+        # Create first admin user
+        user = User(
+            username=username,
+            email=email,
+            is_admin=True,
+            is_active=True
+        )
+        user.set_password(password)
         
-        # Validate username
-        if len(username) < 3:
-            return {'error': 'Username must be at least 3 characters'}, 400
+        db.session.add(user)
+        db.session.commit()
         
-        if not email or '@' not in email:
-            return {'error': 'Invalid email address'}, 400
+        # Auto-login the first admin user after setup
+        login_user(user, remember=True)
+        
+        return {
+            'message': 'Admin user created successfully',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'is_admin': user.is_admin
+            }
+        }, 201
+    
+    except Exception as e:
+        db.session.rollback()
+        return {'error': f'Setup failed: {str(e)}'}, 500
+
+
+@auth_bp.post('/register', tags=[tag_auth],
+    responses={"201": RegisterResponse, "400": ErrorResponse, "500": ErrorResponse}
+)
+def register(body: RegisterRequest):
+    """Register a new user"""
+    try:
+        username = body.username.strip()
+        email = body.email.strip()
+        password = body.password
         
         # Check if user already exists
         if User.query.filter_by(username=username).first():
@@ -59,6 +305,9 @@ def register():
             db.session.add(user)
             db.session.commit()
             
+            # Auto-login the user after registration
+            login_user(user, remember=True)
+            
             return {
                 'success': True,
                 'message': 'User registered successfully',
@@ -75,17 +324,14 @@ def register():
         return {'error': f'Server error: {str(e)}'}, 500
 
 
-@auth_bp.route('/login', methods=['POST'])
-def login():
+@auth_bp.post('/login', tags=[tag_auth],
+    responses={"200": LoginResponse, "400": ErrorResponse, "401": ErrorResponse, "403": ErrorResponse, "500": ErrorResponse}
+)
+def login(body: LoginRequest):
     """Login a user"""
     try:
-        data = request.get_json()
-        
-        if not data or not data.get('username') or not data.get('password'):
-            return {'error': 'Missing username or password'}, 400
-        
-        username = data.get('username', '').strip()
-        password = data.get('password', '')
+        username = body.username.strip()
+        password = body.password
         
         # Find user
         user = User.query.filter_by(username=username).first()
@@ -109,7 +355,9 @@ def login():
         return {'error': f'Login failed: {str(e)}'}, 500
 
 
-@auth_bp.route('/logout', methods=['POST'])
+@auth_bp.post('/logout', tags=[tag_auth],
+    responses={"200": {"type": "object", "properties": {"success": {"type": "boolean"}, "message": {"type": "string"}}}}
+)
 @login_required
 def logout():
     """Logout the current user"""
@@ -120,36 +368,31 @@ def logout():
         return {'error': f'Logout failed: {str(e)}'}, 500
 
 
-@auth_bp.route('/me', methods=['GET'])
+@auth_bp.get('/me', tags=[tag_auth],
+    responses={"200": UserResponse}
+)
 @login_required
 def get_current_user():
-    """Get current user info"""
+    """Get current user information"""
     try:
         return current_user.to_dict(), 200
     except Exception as e:
         return {'error': f'Error fetching user: {str(e)}'}, 500
 
 
-@auth_bp.route('/change-password', methods=['POST'])
+@auth_bp.post('/change-password', tags=[tag_auth],
+    responses={"200": {"type": "object", "properties": {"success": {"type": "boolean"}, "message": {"type": "string"}}}, "400": ErrorResponse, "401": ErrorResponse, "500": ErrorResponse}
+)
 @login_required
-def change_password():
+def change_password(body: ChangePasswordRequest):
     """Change password for current user"""
     try:
-        data = request.get_json()
-        
-        if not data or not data.get('current_password') or not data.get('new_password'):
-            return {'error': 'Missing current or new password'}, 400
-        
-        current_password = data.get('current_password', '')
-        new_password = data.get('new_password', '')
+        current_password = body.current_password
+        new_password = body.new_password
         
         # Verify current password
         if not current_user.check_password(current_password):
             return {'error': 'Current password is incorrect'}, 401
-        
-        # Validate new password
-        if len(new_password) < 8:
-            return {'error': 'New password must be at least 8 characters'}, 400
         
         if current_password == new_password:
             return {'error': 'New password must be different from current password'}, 400
@@ -167,7 +410,9 @@ def change_password():
         return {'error': f'Error changing password: {str(e)}'}, 500
 
 
-@auth_bp.route('/health', methods=['GET'])
+@auth_bp.get('/health', tags=[tag_auth],
+    responses={"200": AuthHealthResponse}
+)
 def auth_health():
     """Check if user is authenticated"""
     return {
@@ -180,7 +425,9 @@ def auth_health():
 # Admin User Management Routes
 # ============================================================================
 
-@auth_bp.route('/admin/users', methods=['GET'])
+@auth_bp.get('/admin/users', tags=[tag_auth],
+    responses={"200": GetUsersResponse, "403": ErrorResponse, "500": ErrorResponse}
+)
 @login_required
 @admin_required
 def get_all_users():
@@ -196,28 +443,18 @@ def get_all_users():
         return {'error': f'Error fetching users: {str(e)}'}, 500
 
 
-@auth_bp.route('/admin/users', methods=['POST'])
+@auth_bp.post('/admin/users', tags=[tag_auth],
+    responses={"201": CreateUserResponse, "400": ErrorResponse, "403": ErrorResponse, "500": ErrorResponse}
+)
 @login_required
 @admin_required
-def admin_create_user():
+def admin_create_user(body: CreateUserRequest):
     """Create new user (admin only)"""
     try:
-        data = request.get_json()
-        
-        if not data or not data.get('username') or not data.get('email') or not data.get('password'):
-            return {'error': 'Missing required fields (username, email, password)'}, 400
-        
-        username = data.get('username', '').strip()
-        email = data.get('email', '').strip()
-        password = data.get('password', '')
-        is_admin = data.get('is_admin', False)
-        
-        # Validate
-        if len(username) < 3:
-            return {'error': 'Username must be at least 3 characters'}, 400
-        
-        if '@' not in email:
-            return {'error': 'Invalid email address'}, 400
+        username = body.username.strip()
+        email = body.email.strip()
+        password = body.password
+        is_admin = body.is_admin
         
         if User.query.filter_by(username=username).first():
             return {'error': 'Username already exists'}, 400
@@ -246,10 +483,12 @@ def admin_create_user():
         return {'error': f'Server error: {str(e)}'}, 500
 
 
-@auth_bp.route('/admin/users/<int:user_id>', methods=['GET'])
+@auth_bp.get('/admin/users/<int:user_id>', tags=[tag_auth],
+    responses={"200": UserResponse, "404": ErrorResponse, "500": ErrorResponse}
+)
 @login_required
 @admin_required
-def get_user_by_id(user_id):
+def get_user_by_id(user_id: int):
     """Get specific user by ID (admin only)"""
     try:
         user = User.query.get(user_id)
@@ -261,10 +500,12 @@ def get_user_by_id(user_id):
         return {'error': f'Error fetching user: {str(e)}'}, 500
 
 
-@auth_bp.route('/admin/users/<int:user_id>', methods=['PUT'])
+@auth_bp.put('/admin/users/<int:user_id>', tags=[tag_auth],
+    responses={"200": UpdateUserResponse, "400": ErrorResponse, "404": ErrorResponse, "500": ErrorResponse}
+)
 @login_required
 @admin_required
-def admin_update_user(user_id):
+def admin_update_user(user_id: int, body: UpdateUserRequest):
     """Update user (admin only)"""
     try:
         user = User.query.get(user_id)
@@ -272,20 +513,16 @@ def admin_update_user(user_id):
             return {'error': 'User not found'}, 404
         
         # Prevent deleting the last admin
-        data = request.get_json()
-        if not data:
-            return {'error': 'No data provided'}, 400
-        
         # Update email if provided
-        if 'email' in data:
-            new_email = data['email'].strip()
+        if body.email:
+            new_email = body.email.strip()
             if new_email != user.email and User.query.filter_by(email=new_email).first():
                 return {'error': 'Email already in use'}, 400
             user.email = new_email
         
         # Update admin status
-        if 'is_admin' in data:
-            new_is_admin = data['is_admin']
+        if body.is_admin is not None:
+            new_is_admin = body.is_admin
             # Prevent removing admin status from last admin
             if user.is_admin and not new_is_admin:
                 admin_count = User.query.filter_by(is_admin=True).count()
@@ -294,13 +531,13 @@ def admin_update_user(user_id):
             user.is_admin = new_is_admin
         
         # Update active status
-        if 'is_active' in data:
-            user.is_active = data['is_active']
+        if body.is_active is not None:
+            user.is_active = body.is_active
         
         # Update password if provided
-        if 'password' in data and data['password']:
+        if body.password:
             try:
-                user.set_password(data['password'])
+                user.set_password(body.password)
             except ValueError as e:
                 return {'error': str(e)}, 400
         
@@ -317,10 +554,12 @@ def admin_update_user(user_id):
         return {'error': f'Error updating user: {str(e)}'}, 500
 
 
-@auth_bp.route('/admin/users/<int:user_id>', methods=['DELETE'])
+@auth_bp.delete('/admin/users/<int:user_id>', tags=[tag_auth],
+    responses={"200": {"type": "object", "properties": {"success": {"type": "boolean"}, "message": {"type": "string"}}}, "400": ErrorResponse, "404": ErrorResponse, "500": ErrorResponse}
+)
 @login_required
 @admin_required
-def admin_delete_user(user_id):
+def admin_delete_user(user_id: int):
     """Delete user (admin only)"""
     try:
         # Prevent deleting yourself
@@ -350,10 +589,12 @@ def admin_delete_user(user_id):
         return {'error': f'Error deleting user: {str(e)}'}, 500
 
 
-@auth_bp.route('/admin/users/<int:user_id>/toggle-admin', methods=['POST'])
+@auth_bp.post('/admin/users/<int:user_id>/toggle-admin', tags=[tag_auth],
+    responses={"200": ToggleResponse, "400": ErrorResponse, "404": ErrorResponse, "500": ErrorResponse}
+)
 @login_required
 @admin_required
-def toggle_admin_status(user_id):
+def toggle_admin_status(user_id: int):
     """Toggle admin status for a user"""
     try:
         user = User.query.get(user_id)
@@ -380,10 +621,12 @@ def toggle_admin_status(user_id):
         return {'error': f'Error updating user: {str(e)}'}, 500
 
 
-@auth_bp.route('/admin/users/<int:user_id>/toggle-active', methods=['POST'])
+@auth_bp.post('/admin/users/<int:user_id>/toggle-active', tags=[tag_auth],
+    responses={"200": ToggleResponse, "400": ErrorResponse, "404": ErrorResponse, "500": ErrorResponse}
+)
 @login_required
 @admin_required
-def toggle_active_status(user_id):
+def toggle_active_status(user_id: int):
     """Toggle active status for a user"""
     try:
         # Prevent deactivating yourself
