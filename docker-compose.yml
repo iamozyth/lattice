@@ -4,7 +4,7 @@ services:
     container_name: ipam-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-netdoc_service}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Nd!2026_S3cur3@Pw}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-NetDoc2026SecurePass9X7Z}
       POSTGRES_DB: ${POSTGRES_DB:-netdoc_prod}
     expose:
       - "5432"
@@ -29,8 +29,10 @@ services:
     environment:
       FLASK_ENV: ${FLASK_ENV:-production}
       FLASK_RUN_HOST: 0.0.0.0
-      # Password URL-encoded: ! = %21, @ = %40
-      DATABASE_URL: ${DATABASE_URL:-postgresql://netdoc_service:Nd%212026_S3cur3%40Pw@ipam-db:5432/netdoc_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-netdoc_service}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-NetDoc2026SecurePass9X7Z}
+      POSTGRES_DB: ${POSTGRES_DB:-netdoc_prod}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-netdoc_service}:${POSTGRES_PASSWORD:-NetDoc2026SecurePass9X7Z}@ipam-db:5432/${POSTGRES_DB:-netdoc_prod}}
     depends_on:
       ipam-db:
         condition: service_healthy
