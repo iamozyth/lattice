@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  ipam-db:
+    image: postgres:15-alpine
+    container_name: ipam-db
+    environment:
+      - POSTGRES_USER=ipam_user
+      - POSTGRES_PASSWORD=ipam_secure_pass
+      - POSTGRES_DB=ipam_db
+    volumes:
+      - ipam_db_data:/var/lib/postgresql/data
+    networks:
+      - ipam-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ipam_user -d ipam_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  ipam-web:
+    build: .
+    container_name: ipam-web
+    ports:
+      - "0.0.0.0:5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_RUN_HOST=0.0.0.0
+      - DATABASE_URL=postgresql://ipam_user:ipam_secure_pass@ipam-db:5432/ipam_db
+    depends_on:
+      ipam-db:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app
+    networks:
+      - ipam-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+volumes:
+  ipam_db_data:
+
+networks:
+  ipam-network:
+    driver: bridge

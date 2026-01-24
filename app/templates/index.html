@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetDoc IPAM - IP Address Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [hidden] { display: none !important; }
+        .fade-in { animation: fadeIn 0.2s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .toast { animation: slideIn 0.3s ease-out, fadeOut 0.3s ease-in 2.7s; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        
+        .progress-bar { transition: width 0.3s ease-in-out; }
+        
+        .status-available { @apply bg-emerald-100 text-emerald-800 border border-emerald-200; }
+        .status-in-use { @apply bg-blue-100 text-blue-800 border border-blue-200; }
+        .status-reserved { @apply bg-amber-100 text-amber-800 border border-amber-200; }
+        .status-blocked { @apply bg-red-100 text-red-800 border border-red-200; }
+        .status-dhcp { @apply bg-purple-100 text-purple-800 border border-purple-200; }
+        .status-deprecated { @apply bg-gray-100 text-gray-800 border border-gray-200; }
+        
+        .env-prod { @apply border-l-red-500; }
+        .env-staging { @apply border-l-amber-500; }
+        .env-dev { @apply border-l-green-500; }
+        .env-test { @apply border-l-blue-500; }
+        
+        .subnet-card { @apply bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-primary-200 transition-all duration-200 cursor-pointer; }
+        
+        .modal-overlay { @apply fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50; }
+        
+        .input-field { @apply w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition-all; }
+        
+        .btn-primary { @apply px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm; }
+        .btn-secondary { @apply px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 active:bg-gray-100 transition-colors; }
+        .btn-danger { @apply px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 active:bg-red-800 transition-colors shadow-sm; }
+        .btn-success { @apply px-4 py-2.5 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 active:bg-emerald-800 transition-colors shadow-sm; }
+        
+        .sidebar { width: 280px; }
+        .main-content { width: calc(100% - 280px); }
+        
+        @media (max-width: 1024px) {
+            .sidebar { width: 100%; position: fixed; left: -100%; transition: left 0.3s; z-index: 40; }
+            .sidebar.open { left: 0; }
+            .main-content { width: 100%; }
+        }
+        
+        .tab-active { @apply text-primary-600 border-b-2 border-primary-600; }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-[100] space-y-2"></div>
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
+        <div class="max-w-[1800px] mx-auto px-4 sm:px-6">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleSidebar()" class="lg:hidden p-2 text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-network-wired text-white text-lg"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-bold text-gray-900">NetDoc IPAM</h1>
+                            <p class="text-xs text-gray-500">IP Address Management System</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <div class="relative hidden sm:block">
+                        <input 
+                            type="text" 
+                            id="globalSearch" 
+                            placeholder="Search IPs, subnets, hosts..." 
+                            class="w-64 md:w-80 pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none text-sm"
+                            onkeyup="handleGlobalSearch(this.value)"
+                        >
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                    
+                    <button onclick="showExportModal()" class="p-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors" title="Export Data">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <button onclick="showImportModal()" class="p-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors" title="Import Data">
+                        <i class="fas fa-upload"></i>
+                    </button>
+                    
+                    <button onclick="showSubnetModal()" class="btn-primary hidden sm:flex items-center gap-2">
+                        <i class="fas fa-plus"></i>
+                        <span>New Subnet</span>
+                    </button>
+                    <button onclick="showSubnetModal()" class="btn-primary sm:hidden p-2.5">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar bg-white border-r border-gray-200 min-h-[calc(100vh-64px)] flex flex-col">
+            <!-- Dashboard Stats -->
+            <div class="p-4 border-b border-gray-100">
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Overview</h3>
+                <div class="space-y-3">
+                    <div class="bg-gradient-to-r from-primary-50 to-primary-100 rounded-lg p-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-primary-700">Total Subnets</span>
+                            <span id="statTotalSubnets" class="text-2xl font-bold text-primary-700">0</span>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-r from-emerald-50 to-emerald-100 rounded-lg p-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-emerald-700">Documented IPs</span>
+                            <span id="statTotalIPs" class="text-2xl font-bold text-emerald-700">0</span>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-r from-amber-50 to-amber-100 rounded-lg p-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-amber-700">Utilization</span>
+                            <span id="statUtilization" class="text-2xl font-bold text-amber-700">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Filters -->
+            <div class="p-4 border-b border-gray-100 flex-1 overflow-y-auto">
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Filters</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Environment</label>
+                        <select id="filterEnvironment" onchange="applyFilters()" class="input-field text-sm">
+                            <option value="">All Environments</option>
+                            <option value="prod">Production</option>
+                            <option value="staging">Staging</option>
+                            <option value="dev">Development</option>
+                            <option value="test">Test</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">VLAN</label>
+                        <input type="number" id="filterVLAN" placeholder="Filter by VLAN" onchange="applyFilters()" class="input-field text-sm">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Sort By</label>
+                        <select id="sortBy" onchange="applyFilters()" class="input-field text-sm">
+                            <option value="cidr">CIDR (Network)</option>
+                            <option value="name">Name</option>
+                            <option value="vlan">VLAN</option>
+                            <option value="created">Date Created</option>
+                        </select>
+                    </div>
+                    
+                    <button onclick="clearFilters()" class="w-full btn-secondary text-sm">
+                        <i class="fas fa-times mr-2"></i>Clear Filters
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="p-4 border-t border-gray-100 bg-gray-50">
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Quick Actions</h3>
+                <div class="space-y-2">
+                    <button onclick="showIPLookupModal()" class="w-full btn-secondary text-sm text-left flex items-center gap-2">
+                        <i class="fas fa-search w-5"></i>
+                        <span>IP Lookup</span>
+                    </button>
+                    <a href="/api/export" download="ipam-export.json" class="w-full btn-secondary text-sm flex items-center gap-2">
+                        <i class="fas fa-file-export w-5"></i>
+                        <span>Quick Export</span>
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content p-6">
+            <!-- Mobile Search -->
+            <div class="sm:hidden mb-4">
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        placeholder="Search..." 
+                        class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none"
+                        onkeyup="handleGlobalSearch(this.value)"
+                    >
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex gap-6 border-b border-gray-200 mb-6">
+                <button onclick="switchTab('subnets')" id="tabSubnets" class="pb-3 text-sm font-medium tab-active">
+                    <i class="fas fa-sitemap mr-2"></i>Subnets
+                </button>
+                <button onclick="switchTab('ips')" id="tabIPs" class="pb-3 text-sm font-medium text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-ethernet mr-2"></i>All IPs
+                </button>
+            </div>
+
+            <!-- Subnets View -->
+            <div id="subnetsView">
+                <div id="subnetsContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+                    <div class="col-span-full text-center py-12 text-gray-500">
+                        <i class="fas fa-spinner fa-spin text-2xl mb-3"></i>
+                        <p>Loading subnets...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All IPs View -->
+            <div id="ipsView" class="hidden">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-4 border-b border-gray-100 flex flex-wrap gap-3 items-center justify-between">
+                        <div class="flex gap-2">
+                            <select id="ipFilterStatus" onchange="loadAllIPs()" class="input-field text-sm py-2">
+                                <option value="">All Statuses</option>
+                                <option value="available">Available</option>
+                                <option value="in-use">In Use</option>
+                                <option value="reserved">Reserved</option>
+                                <option value="blocked">Blocked</option>
+                                <option value="dhcp">DHCP</option>
+                                <option value="deprecated">Deprecated</option>
+                            </select>
+                        </div>
+                        <span id="ipCount" class="text-sm text-gray-500"></span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">IP Address</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Hostname</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Subnet</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Device</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Owner</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ipsTableBody" class="divide-y divide-gray-100">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Subnet Modal -->
+    <div id="subnetModal" class="hidden modal-overlay fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden mx-4">
+            <div class="bg-gradient-to-r from-primary-600 to-primary-700 text-white p-5 flex justify-between items-center">
+                <h2 class="text-xl font-semibold" id="modalTitle">New Subnet</h2>
+                <button onclick="closeSubnetModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            
+            <form id="subnetForm" class="p-6 space-y-5 overflow-y-auto max-h-[calc(90vh-140px)]" onsubmit="saveSubnet(event)">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Subnet Name <span class="text-red-500">*</span></label>
+                        <input type="text" id="subnetName" required class="input-field" placeholder="e.g., Server VLAN">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">CIDR Notation <span class="text-red-500">*</span></label>
+                        <input type="text" id="subnetCIDR" required class="input-field font-mono" placeholder="e.g., 192.168.1.0/24">
+                        <p class="text-xs text-gray-500 mt-1">Supports IPv4 and IPv6</p>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+                    <textarea id="subnetDescription" rows="2" class="input-field resize-none" placeholder="What is this subnet used for?"></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">VLAN ID</label>
+                        <input type="number" id="subnetVLAN" min="1" max="4094" class="input-field" placeholder="1-4094">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Environment</label>
+                        <select id="subnetEnvironment" class="input-field">
+                            <option value="">Select...</option>
+                            <option value="prod">Production</option>
+                            <option value="staging">Staging</option>
+                            <option value="dev">Development</option>
+                            <option value="test">Test</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Location</label>
+                        <input type="text" id="subnetLocation" class="input-field" placeholder="e.g., DC1, Rack 5">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Gateway IP</label>
+                        <input type="text" id="subnetGateway" class="input-field font-mono" placeholder="e.g., 192.168.1.1">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Primary DNS</label>
+                        <input type="text" id="subnetDNS1" class="input-field font-mono" placeholder="e.g., 8.8.8.8">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Secondary DNS</label>
+                        <input type="text" id="subnetDNS2" class="input-field font-mono" placeholder="e.g., 8.8.4.4">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Tags</label>
+                    <input type="text" id="subnetTags" class="input-field" placeholder="e.g., internal, servers, dmz (comma-separated)">
+                </div>
+
+                <div class="flex gap-3 justify-end pt-4 border-t border-gray-100">
+                    <button type="button" onclick="closeSubnetModal()" class="btn-secondary">Cancel</button>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-save mr-2"></i>Save Subnet
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- IP Modal -->
+    <div id="ipModal" class="hidden modal-overlay fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden mx-4">
+            <div class="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white p-5 flex justify-between items-center">
+                <h2 class="text-xl font-semibold" id="ipModalTitle">New IP Address</h2>
+                <button onclick="closeIPModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            
+            <form id="ipForm" class="p-6 space-y-5 overflow-y-auto max-h-[calc(90vh-140px)]" onsubmit="saveIP(event)">
+                <!-- Next Available IP Helper -->
+                <div id="nextAvailableIP" class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex justify-between items-center">
+                    <div>
+                        <span class="text-sm text-emerald-700">Next available IP:</span>
+                        <span id="nextIPAddress" class="font-mono font-semibold text-emerald-800 ml-2">-</span>
+                    </div>
+                    <button type="button" onclick="useNextAvailableIP()" class="text-sm btn-success py-1.5">Use This</button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">IP Address <span class="text-red-500">*</span></label>
+                        <input type="text" id="ipAddress" required class="input-field font-mono" placeholder="e.g., 192.168.1.100">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
+                        <select id="ipStatus" class="input-field">
+                            <option value="in-use">In Use</option>
+                            <option value="available">Available</option>
+                            <option value="reserved">Reserved</option>
+                            <option value="blocked">Blocked</option>
+                            <option value="dhcp">DHCP</option>
+                            <option value="deprecated">Deprecated</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Hostname</label>
+                        <input type="text" id="ipHostname" class="input-field" placeholder="e.g., server01">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">FQDN</label>
+                        <input type="text" id="ipFQDN" class="input-field" placeholder="e.g., server01.example.com">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+                    <textarea id="ipDescription" rows="2" class="input-field resize-none" placeholder="What is this IP used for?"></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">MAC Address</label>
+                        <input type="text" id="ipMAC" class="input-field font-mono" placeholder="00:11:22:33:44:55">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Device Type</label>
+                        <input type="text" id="ipDeviceType" class="input-field" placeholder="e.g., Server, Router, Switch" list="deviceTypes">
+                        <datalist id="deviceTypes">
+                            <option value="Server">
+                            <option value="Router">
+                            <option value="Switch">
+                            <option value="Firewall">
+                            <option value="Access Point">
+                            <option value="Workstation">
+                            <option value="Printer">
+                            <option value="IoT Device">
+                            <option value="Virtual Machine">
+                            <option value="Container">
+                            <option value="Load Balancer">
+                        </datalist>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Manufacturer</label>
+                        <input type="text" id="ipManufacturer" class="input-field" placeholder="e.g., Dell, HP, Cisco">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Model</label>
+                        <input type="text" id="ipModel" class="input-field" placeholder="e.g., PowerEdge R740">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Owner</label>
+                        <input type="text" id="ipOwner" class="input-field" placeholder="e.g., IT Team, John Doe">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Department</label>
+                        <input type="text" id="ipDepartment" class="input-field" placeholder="e.g., Infrastructure">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Notes</label>
+                    <textarea id="ipNotes" rows="2" class="input-field resize-none" placeholder="Additional notes..."></textarea>
+                </div>
+
+                <div class="flex gap-3 justify-end pt-4 border-t border-gray-100">
+                    <button type="button" onclick="closeIPModal()" class="btn-secondary">Cancel</button>
+                    <button type="submit" class="btn-success">
+                        <i class="fas fa-save mr-2"></i>Save IP
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Subnet Detail Modal -->
+    <div id="detailModal" class="hidden modal-overlay fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden mx-4">
+            <div id="detailHeader" class="bg-gradient-to-r from-primary-600 to-primary-700 text-white p-5">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h2 class="text-2xl font-bold" id="detailSubnetName"></h2>
+                        <p class="text-primary-200 font-mono mt-1" id="detailCIDR"></p>
+                    </div>
+                    <button onclick="closeDetailModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+                <!-- Subnet Info Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <p class="text-xs text-gray-500 uppercase tracking-wider">VLAN</p>
+                        <p class="text-xl font-bold text-gray-800 mt-1" id="detailVLAN">-</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <p class="text-xs text-gray-500 uppercase tracking-wider">Gateway</p>
+                        <p class="text-lg font-mono font-semibold text-gray-800 mt-1" id="detailGateway">-</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <p class="text-xs text-gray-500 uppercase tracking-wider">Environment</p>
+                        <p class="text-lg font-semibold text-gray-800 mt-1" id="detailEnvironment">-</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <p class="text-xs text-gray-500 uppercase tracking-wider">Location</p>
+                        <p class="text-lg font-semibold text-gray-800 mt-1" id="detailLocation">-</p>
+                    </div>
+                </div>
+
+                <!-- Utilization Bar -->
+                <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium text-gray-700">IP Utilization</span>
+                        <span class="text-sm text-gray-500"><span id="detailUsedIPs">0</span> / <span id="detailTotalIPs">0</span> IPs documented</span>
+                    </div>
+                    <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                        <div id="utilizationBar" class="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 progress-bar" style="width: 0%"></div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2"><span id="detailAvailableIPs">0</span> IPs available for allocation</p>
+                </div>
+
+                <!-- Description -->
+                <div class="mb-6" id="descriptionSection">
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">Description</h4>
+                    <p class="text-gray-600" id="detailDescription">-</p>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex flex-wrap gap-3 mb-6 pb-6 border-b border-gray-200">
+                    <button onclick="showIPModal()" class="btn-success">
+                        <i class="fas fa-plus mr-2"></i>Add IP
+                    </button>
+                    <button onclick="showBulkAddModal()" class="btn-secondary">
+                        <i class="fas fa-layer-group mr-2"></i>Bulk Add
+                    </button>
+                    <button onclick="editCurrentSubnet()" class="btn-primary">
+                        <i class="fas fa-edit mr-2"></i>Edit Subnet
+                    </button>
+                    <button onclick="deleteCurrentSubnet()" class="btn-danger">
+                        <i class="fas fa-trash mr-2"></i>Delete
+                    </button>
+                </div>
+
+                <!-- IP List -->
+                <div>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">IP Addresses</h3>
+                        <div class="flex gap-2">
+                            <select id="detailIPFilter" onchange="filterDetailIPs()" class="input-field text-sm py-1.5">
+                                <option value="">All Statuses</option>
+                                <option value="available">Available</option>
+                                <option value="in-use">In Use</option>
+                                <option value="reserved">Reserved</option>
+                                <option value="blocked">Blocked</option>
+                                <option value="dhcp">DHCP</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="detailIPList" class="space-y-2">
+                        <p class="text-gray-500 text-center py-8">No IPs documented yet</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- IP Lookup Modal -->
+    <div id="lookupModal" class="hidden modal-overlay fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4">
+            <div class="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-5 flex justify-between items-center">
+                <h2 class="text-xl font-semibold">IP Lookup</h2>
+                <button onclick="closeLookupModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="flex gap-2">
+                    <input type="text" id="lookupIP" class="input-field font-mono flex-1" placeholder="Enter IP address...">
+                    <button onclick="performIPLookup()" class="btn-primary">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                <div id="lookupResult" class="mt-4 hidden">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Add Modal -->
+    <div id="bulkModal" class="hidden modal-overlay fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4">
+            <div class="bg-gradient-to-r from-amber-600 to-amber-700 text-white p-5 flex justify-between items-center">
+                <h2 class="text-xl font-semibold">Bulk Add IPs</h2>
+                <button onclick="closeBulkModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-gray-600 mb-4">Enter one IP per line. Optionally add hostname and status separated by comma.</p>
+                <p class="text-xs text-gray-500 mb-2">Format: <code class="bg-gray-100 px-1 rounded">IP, hostname, status</code></p>
+                <textarea id="bulkIPs" rows="10" class="input-field font-mono text-sm" placeholder="192.168.1.10, server01, in-use&#10;192.168.1.11, server02, in-use&#10;192.168.1.12"></textarea>
+                <div class="flex gap-3 justify-end mt-4">
+                    <button onclick="closeBulkModal()" class="btn-secondary">Cancel</button>
+                    <button onclick="processBulkAdd()" class="btn-primary">
+                        <i class="fas fa-plus mr-2"></i>Add IPs
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="importModal" class="hidden modal-overlay fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4">
+            <div class="bg-gradient-to-r from-teal-600 to-teal-700 text-white p-5 flex justify-between items-center">
+                <h2 class="text-xl font-semibold">Import Data</h2>
+                <button onclick="closeImportModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                    <i class="fas fa-file-upload text-4xl text-gray-400 mb-3"></i>
+                    <p class="text-gray-600 mb-2">Drop your JSON file here or</p>
+                    <input type="file" id="importFile" accept=".json" class="hidden" onchange="handleImportFile(event)">
+                    <button onclick="document.getElementById('importFile').click()" class="btn-primary">
+                        Browse Files
+                    </button>
+                </div>
+                <div class="mt-4">
+                    <label class="flex items-center gap-2 text-sm text-gray-600">
+                        <input type="checkbox" id="importReplace" class="rounded">
+                        <span>Replace existing data (dangerous!)</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Overlay -->
+    <div id="sidebarOverlay" class="hidden fixed inset-0 bg-black/50 z-30 lg:hidden" onclick="toggleSidebar()"></div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>
