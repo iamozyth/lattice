@@ -55,6 +55,7 @@ cd netdoc-ipam
 cp .env.example .env
 # edit .env with strong, org-approved values
 # generate a fresh password: openssl rand -base64 24
+# if your password contains @ / : or other special chars, URL-encode it before putting in DATABASE_URL
 ```
 	- Portainer: either set the variables in the stack form or upload/place `.env` alongside the compose file.
 
@@ -104,7 +105,7 @@ All sensitive values are loaded from `.env` (see `.env.example`).
 | Variable | Default (from docker-compose) | Description |
 |----------|------------------------------|-------------|
 | `POSTGRES_USER` | `netdoc_service` | Database role used by the app |
-| `POSTGRES_PASSWORD` | `u4Jz9qT!sV@1fX8pN2rL0wC5` | Random strong placeholder (replace per deployment) |
+| `POSTGRES_PASSWORD` | `S3cureNetdocP4ssw0rd2026` | Strong URL-safe placeholder (replace per deployment) |
 | `POSTGRES_DB` | `netdoc_prod` | Database name |
 | `DATABASE_URL` | `postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@ipam-db:5432/${POSTGRES_DB}` | Full connection string consumed by the app |
 | `FLASK_ENV` | `production` | Flask environment mode |
