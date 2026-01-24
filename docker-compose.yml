@@ -29,7 +29,7 @@ services:
     environment:
       FLASK_ENV: ${FLASK_ENV:-production}
       FLASK_RUN_HOST: 0.0.0.0
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-netdoc_service}:${POSTGRES_PASSWORD:-u4Jz9qT!sV1fX8pN2rL0wC5}@ipam-db:5432/${POSTGRES_DB:-netdoc_prod}}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-netdoc_service}:${POSTGRES_PASSWORD:-4Jz9qT!sV1fX8pN2rL0wC5@ipam-db:5432/${POSTGRES_DB:-netdoc_prod}}
     depends_on:
       ipam-db:
         condition: service_healthy
