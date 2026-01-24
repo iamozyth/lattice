@@ -1,12 +1,17 @@
 from flask import Blueprint, jsonify, request, render_template, send_from_directory
 from app import db
 from app.models import Subnet, IP, ip_sort_key
+from app.scanner import NetworkScanner
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 import os
 import json
 import ipaddress
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
+scanner = NetworkScanner()
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 static_bp = Blueprint('static', __name__)
@@ -684,6 +689,229 @@ def get_device_types():
 # ============================================================================
 # Frontend Routes
 # ============================================================================
+
+@static_bp.route('/')
+def index():
+    return render_template('index.html')
+
+
+# ============================================================================
+# Network Scanning Routes
+# ============================================================================
+
+@api_bp.route('/scanner/status', methods=['GET'])
+def scanner_status():
+    """Check if network scanner is available"""
+    return jsonify({
+        'available': scanner.is_available(),
+        'message': 'Nmap is available' if scanner.is_available() else 'Nmap is not installed or not in PATH'
+    })
+
+
+@api_bp.route('/scanner/scan-subnet/<int:subnet_id>', methods=['POST'])
+def scan_subnet(subnet_id):
+    """
+    Scan a subnet for live hosts
+    
+    POST data:
+    {
+        'scan_type': 'ping' or 'full' (default: 'ping')
+    }
+    """
+    if not scanner.is_available():
+        return jsonify({'error': 'Nmap scanner not available'}), 503
+    
+    subnet = Subnet.query.get(subnet_id)
+    if not subnet:
+        return jsonify({'error': 'Subnet not found'}), 404
+    
+    data = request.get_json()
+    scan_type = data.get('scan_type', 'ping')
+    
+    try:
+        logger.info(f"Starting {scan_type} scan for subnet {subnet.name} ({subnet.cidr})")
+        
+        # Perform scan
+        scan_result = scanner.scan_subnet(subnet.cidr, scan_type)
+        
+        if 'error' in scan_result:
+            return jsonify(scan_result), 400
+        
+        # Get recommendations
+        recommendations = scanner.recommend_ips_for_subnet(
+            subnet_id,
+            scan_result['discovered']
+        )
+        
+        return jsonify({
+            'subnet_id': subnet_id,
+            'subnet_name': subnet.name,
+            'subnet_cidr': subnet.cidr,
+            'scan_result': scan_result,
+            'recommendations': recommendations,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    
+    except Exception as e:
+        logger.error(f"Scan error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/scanner/bulk-import', methods=['POST'])
+def bulk_import_ips():
+    """
+    Bulk import recommended IPs from scan results
+    
+    POST data:
+    {
+        'subnet_id': int,
+        'ips': [
+            {
+                'address': '192.168.1.10',
+                'hostname': 'server1',
+                'mac_address': '00:11:22:33:44:55',
+                'device_type': 'Server',
+                'status': 'in-use'
+            }
+        ],
+        'auto_enrich': true (default: true)
+    }
+    """
+    data = request.get_json()
+    subnet_id = data.get('subnet_id')
+    ips = data.get('ips', [])
+    auto_enrich = data.get('auto_enrich', True)
+    
+    subnet = Subnet.query.get(subnet_id)
+    if not subnet:
+        return jsonify({'error': 'Subnet not found'}), 404
+    
+    imported = []
+    failed = []
+    
+    for ip_data in ips:
+        try:
+            # Validate IP is in subnet
+            if not subnet.contains_ip(ip_data['address']):
+                failed.append({
+                    'address': ip_data['address'],
+                    'error': 'IP not in subnet CIDR range'
+                })
+                continue
+            
+            # Check if already exists
+            existing = IP.query.filter_by(
+                address=ip_data['address'],
+                subnet_id=subnet_id
+            ).first()
+            
+            if existing:
+                failed.append({
+                    'address': ip_data['address'],
+                    'error': 'IP already in inventory'
+                })
+                continue
+            
+            # Create new IP entry
+            new_ip = IP(
+                address=ip_data['address'],
+                subnet_id=subnet_id,
+                status=ip_data.get('status', 'in-use'),
+                hostname=ip_data.get('hostname') if auto_enrich else None,
+                mac_address=ip_data.get('mac_address') if auto_enrich else None,
+                device_type=ip_data.get('device_type') if auto_enrich else None,
+                description=f"Discovered via network scan - {ip_data.get('os_info', 'Unknown device')}" if auto_enrich else None
+            )
+            
+            db.session.add(new_ip)
+            imported.append(ip_data['address'])
+        
+        except Exception as e:
+            failed.append({
+                'address': ip_data.get('address', 'unknown'),
+                'error': str(e)
+            })
+    
+    db.session.commit()
+    
+    return jsonify({
+        'subnet_id': subnet_id,
+        'imported_count': len(imported),
+        'failed_count': len(failed),
+        'imported': imported,
+        'failed': failed,
+        'timestamp': datetime.utcnow().isoformat()
+    }), 201
+
+
+@api_bp.route('/scanner/verify/<int:subnet_id>', methods=['POST'])
+def verify_subnet(subnet_id):
+    """
+    Verify status of all IPs in a subnet
+    
+    Returns verification results for each IP
+    """
+    if not scanner.is_available():
+        return jsonify({'error': 'Nmap scanner not available'}), 503
+    
+    subnet = Subnet.query.get(subnet_id)
+    if not subnet:
+        return jsonify({'error': 'Subnet not found'}), 404
+    
+    try:
+        results = []
+        live_count = 0
+        
+        for ip_obj in subnet.ips:
+            result = scanner.verify_ip_status(ip_obj.address, subnet_id)
+            results.append(result)
+            
+            if result.get('is_live'):
+                live_count += 1
+        
+        return jsonify({
+            'subnet_id': subnet_id,
+            'subnet_name': subnet.name,
+            'total_ips': len(subnet.ips),
+            'live_ips': live_count,
+            'results': results,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    
+    except Exception as e:
+        logger.error(f"Verification error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/scanner/verify-ip', methods=['POST'])
+def verify_ip():
+    """
+    Verify status of a single IP
+    
+    POST data:
+    {
+        'address': '192.168.1.10',
+        'subnet_id': 1
+    }
+    """
+    if not scanner.is_available():
+        return jsonify({'error': 'Nmap scanner not available'}), 503
+    
+    data = request.get_json()
+    address = data.get('address')
+    subnet_id = data.get('subnet_id')
+    
+    if not address or not subnet_id:
+        return jsonify({'error': 'address and subnet_id are required'}), 400
+    
+    try:
+        result = scanner.verify_ip_status(address, subnet_id)
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"IP verification error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 
 @static_bp.route('/')
 def index():

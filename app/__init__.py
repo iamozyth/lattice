@@ -51,6 +51,13 @@ def create_app():
                 else:
                     logger.error(f"Failed to connect to database after {max_retries} attempts: {e}")
                     raise
+        
+        # Initialize background scheduler
+        try:
+            from app.scheduler import init_scheduler
+            init_scheduler(app)
+        except Exception as e:
+            logger.warning(f"Failed to initialize scheduler: {e}. Continuing without background tasks.")
     
     # Health check
     @app.route('/health')

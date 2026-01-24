@@ -22,6 +22,7 @@ services:
 
   ipam-web:
     build: .
+    image: netdoc-ipam:latest
     container_name: ipam-web
     ports:
       - "0.0.0.0:5000:5000"
