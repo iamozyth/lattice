@@ -913,11 +913,6 @@ def verify_ip():
         return jsonify({'error': str(e)}), 500
 
 
-@static_bp.route('/')
-def index():
-    return render_template('index.html')
-
-
 @static_bp.route('/css/<path:filename>')
 def serve_css(filename):
     return send_from_directory('static/css', filename)
