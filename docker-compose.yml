@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   ipam-db:
     image: postgres:15-alpine

@@ -130,6 +130,10 @@
                         <i class="fas fa-upload"></i>
                     </button>
                     
+                    <button onclick="showSettingsModal()" class="p-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors" title="Settings">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    
                     <button onclick="showSubnetModal()" class="btn-primary hidden sm:flex items-center gap-2">
                         <i class="fas fa-plus"></i>
                         <span>New Subnet</span>
@@ -589,7 +593,7 @@
 
     <!-- IP Lookup Modal -->
     <div id="lookupModal" class="hidden modal-overlay fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
             <div class="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-5 flex justify-between items-center">
                 <h2 class="text-xl font-semibold">IP Lookup</h2>
                 <button onclick="closeLookupModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
@@ -611,7 +615,7 @@
 
     <!-- Bulk Add Modal -->
     <div id="bulkModal" class="hidden modal-overlay fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
             <div class="bg-gradient-to-r from-amber-600 to-amber-700 text-white p-5 flex justify-between items-center">
                 <h2 class="text-xl font-semibold">Bulk Add IPs</h2>
                 <button onclick="closeBulkModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
@@ -634,7 +638,7 @@
 
     <!-- Scan Modal -->
     <div id="scanModal" class="hidden modal-overlay fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 overflow-hidden">
             <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-5 flex justify-between items-center">
                 <h2 class="text-xl font-semibold">Scan Subnet</h2>
                 <button onclick="closeScanModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
@@ -700,7 +704,7 @@
     </div>
     <!-- Import Modal -->
     <div id="importModal" class="hidden modal-overlay fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
             <div class="bg-gradient-to-r from-teal-600 to-teal-700 text-white p-5 flex justify-between items-center">
                 <h2 class="text-xl font-semibold">Import Data</h2>
                 <button onclick="closeImportModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
@@ -729,6 +733,179 @@
     <!-- Mobile Overlay -->
     <div id="sidebarOverlay" class="hidden fixed inset-0 bg-black/50 z-30 lg:hidden" onclick="toggleSidebar()"></div>
 
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-</body>
+    <!-- Login Modal -->
+    <div id="loginModal" class="hidden modal-overlay fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div class="bg-gradient-to-r from-primary-600 to-primary-700 text-white p-5 flex justify-between items-center">
+                <h2 class="text-xl font-semibold">Login to NetDoc IPAM</h2>
+                <button onclick="closeLoginModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <form id="loginForm" class="p-6 space-y-4" onsubmit="handleLogin(event)">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Username</label>
+                    <input type="text" id="loginUsername" required class="input-field" placeholder="Enter your username">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                    <input type="password" id="loginPassword" required class="input-field" placeholder="Enter your password">
+                </div>
+                <button type="submit" class="w-full btn-primary">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Login
+                </button>
+                <div class="text-center text-sm text-gray-600">
+                    Don't have an account? <button type="button" onclick="switchToRegister()" class="text-primary-600 hover:text-primary-800 font-medium">Register here</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="registerModal" class="hidden modal-overlay fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div class="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white p-5 flex justify-between items-center">
+                <h2 class="text-xl font-semibold">Create Account</h2>
+                <button onclick="closeRegisterModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <form id="registerForm" class="p-6 space-y-4" onsubmit="handleRegister(event)">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Username</label>
+                    <input type="text" id="registerUsername" required class="input-field" placeholder="Choose a username (min 3 chars)">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+                    <input type="email" id="registerEmail" required class="input-field" placeholder="Enter your email">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                    <input type="password" id="registerPassword" required class="input-field" placeholder="Min 8 characters">
+                </div>
+                <button type="submit" class="w-full btn-success">
+                    <i class="fas fa-user-plus mr-2"></i>Create Account
+                </button>
+                <div class="text-center text-sm text-gray-600">
+                    Already have an account? <button type="button" onclick="switchToLogin()" class="text-primary-600 hover:text-primary-800 font-medium">Login here</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="hidden modal-overlay fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+            <div class="bg-gradient-to-r from-slate-600 to-slate-700 text-white p-5 flex justify-between items-center">
+                <h2 class="text-xl font-semibold">Settings</h2>
+                <button onclick="closeSettingsModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-6">
+                <!-- User Info -->
+                <div class="pb-6 border-b border-gray-200">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3">Account Information</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Username:</span>
+                            <span class="font-medium text-gray-800" id="settingsUsername">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Email:</span>
+                            <span class="font-medium text-gray-800" id="settingsEmail">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Role:</span>
+                            <span class="font-medium text-gray-800" id="settingsRole">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Change Password -->
+                <div class="pb-6 border-b border-gray-200">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3">Change Password</h3>
+                    <form id="passwordForm" class="space-y-3" onsubmit="handleChangePassword(event)">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                            <input type="password" id="currentPassword" required class="input-field" placeholder="Enter current password">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                            <input type="password" id="newPassword" required class="input-field" placeholder="Min 8 characters">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                            <input type="password" id="confirmPassword" required class="input-field" placeholder="Confirm new password">
+                        </div>
+                        <button type="submit" class="w-full btn-primary">
+                            <i class="fas fa-key mr-2"></i>Update Password
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Admin Panel Link -->
+                <div id="adminPanelSection" class="pb-6 border-b border-gray-200 hidden">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3">Administration</h3>
+                    <button onclick="showAdminUsersModal()" class="w-full btn-secondary text-left flex items-center gap-2">
+                        <i class="fas fa-users-cog w-5"></i>
+                        <span>Manage Users</span>
+                    </button>
+                </div>
+
+                <!-- Logout -->
+                <div class="flex gap-3 justify-end">
+                    <button onclick="closeSettingsModal()" class="btn-secondary">Close</button>
+                    <button onclick="handleLogout()" class="btn-danger">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Users Modal -->
+    <div id="adminUsersModal" class="hidden modal-overlay fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden max-h-[90vh]">
+            <div class="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-5 flex justify-between items-center">
+                <h2 class="text-xl font-semibold">User Management</h2>
+                <button onclick="closeAdminUsersModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                <!-- Create New User -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-4">Create New User</h3>
+                    <form id="adminCreateUserForm" class="grid grid-cols-1 md:grid-cols-2 gap-4" onsubmit="handleAdminCreateUser(event)">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                            <input type="text" id="adminNewUsername" required class="input-field" placeholder="Min 3 characters">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input type="email" id="adminNewEmail" required class="input-field" placeholder="user@example.com">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                            <input type="password" id="adminNewPassword" required class="input-field" placeholder="Min 8 characters">
+                        </div>
+                        <div class="flex items-end">
+                            <label class="flex items-center gap-2 text-sm">
+                                <input type="checkbox" id="adminNewIsAdmin" class="rounded">
+                                <span class="text-gray-700">Grant Admin Rights</span>
+                            </label>
+                        </div>
+                        <button type="submit" class="md:col-span-2 btn-success">
+                            <i class="fas fa-user-plus mr-2"></i>Create User
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Users List -->
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-700 mb-4">Active Users</h3>
+                    <div id="adminUsersList" class="space-y-2 max-h-96 overflow-y-auto">
+                        <p class="text-gray-500 text-center py-8">Loading users...</p>
+                    </div>
 </html>

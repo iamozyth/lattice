@@ -13,6 +13,7 @@ let restoreDetailAfterIPModal = false;
 let scanInProgress = false;
 let currentScanJobId = null;
 let currentScanDiscovered = [];
+let currentUser = null;
 
 // Simple helpers to show/hide modals reliably (since we don't have Tailwind utilities built)
 function showModal(elementId) {
@@ -38,12 +39,419 @@ function isModalVisible(elementId) {
 }
 
 // ============================================================================
+// Authentication
+// ============================================================================
+
+async function checkAuthStatus() {
+    try {
+        console.log('[Auth] Checking authentication status...');
+        const res = await fetch('/api/auth/health');
+        const data = await res.json();
+        console.log('[Auth] Response:', data);
+        
+        if (data.authenticated && data.user) {
+            console.log('[Auth] User authenticated:', data.user.username);
+            currentUser = data.user;
+            // User is logged in, hide login modal
+            hideModal('loginModal');
+            hideModal('registerModal');
+            document.body.style.pointerEvents = 'auto';
+            return true;
+        } else {
+            // Not logged in, show login modal and disable interaction
+            console.log('[Auth] User not authenticated, showing login modal');
+            currentUser = null;
+            showModal('loginModal');
+            document.body.style.pointerEvents = 'auto';
+            document.getElementById('loginModal').style.pointerEvents = 'auto';
+            return false;
+        }
+    } catch (error) {
+        console.error('[Auth] Auth check failed:', error);
+        currentUser = null;
+        showModal('loginModal');
+        return false;
+    }
+}
+
+async function handleLogin(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+    
+    try {
+        const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok) {
+            showToast(data.error || 'Login failed', 'error');
+            return;
+        }
+        
+        currentUser = data.user;
+        hideModal('loginModal');
+        hideModal('registerModal');
+        
+        // Reset form
+        document.getElementById('loginForm').reset();
+        
+        showToast('Logged in successfully!', 'success');
+        
+        // Reload data
+        loadSubnets();
+        loadStats();
+    } catch (error) {
+        console.error('Login error:', error);
+        showToast('Login failed', 'error');
+    }
+}
+
+async function handleRegister(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('registerUsername').value;
+    const email = document.getElementById('registerEmail').value;
+    const password = document.getElementById('registerPassword').value;
+    
+    try {
+        const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, email, password })
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok) {
+            showToast(data.error || 'Registration failed', 'error');
+            return;
+        }
+        
+        // Auto-login after registration
+        if (data.user) {
+            currentUser = data.user;
+            hideModal('loginModal');
+            hideModal('registerModal');
+            document.getElementById('registerForm').reset();
+            showToast('Account created successfully!', 'success');
+            loadSubnets();
+            loadStats();
+        }
+    } catch (error) {
+        console.error('Register error:', error);
+        showToast('Registration failed', 'error');
+    }
+}
+
+async function handleLogout() {
+    try {
+        const res = await fetch('/api/auth/logout', { method: 'POST' });
+        
+        if (res.ok) {
+            currentUser = null;
+            showToast('Logged out successfully', 'success');
+            setTimeout(() => {
+                showModal('loginModal');
+                closeSettingsModal();
+            }, 500);
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+        showToast('Logout failed', 'error');
+    }
+}
+
+async function handleChangePassword(event) {
+    event.preventDefault();
+    
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    if (newPassword !== confirmPassword) {
+        showToast('Passwords do not match', 'error');
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/auth/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok) {
+            showToast(data.error || 'Password change failed', 'error');
+            return;
+        }
+        
+        showToast('Password changed successfully', 'success');
+        document.getElementById('passwordForm').reset();
+    } catch (error) {
+        console.error('Password change error:', error);
+        showToast('Password change failed', 'error');
+    }
+}
+
+function switchToLogin() {
+    hideModal('registerModal');
+    showModal('loginModal');
+}
+
+function switchToRegister() {
+    hideModal('loginModal');
+    showModal('registerModal');
+}
+
+function showSettingsModal() {
+    if (!currentUser) {
+        showToast('Please log in first', 'error');
+        return;
+    }
+    
+    // Populate settings
+    document.getElementById('settingsUsername').textContent = currentUser.username;
+    document.getElementById('settingsEmail').textContent = currentUser.email;
+    document.getElementById('settingsRole').textContent = currentUser.is_admin ? 'Administrator' : 'User';
+    
+    // Show/hide admin panel based on user role
+    const adminPanelSection = document.getElementById('adminPanelSection');
+    if (currentUser.is_admin) {
+        adminPanelSection.classList.remove('hidden');
+    } else {
+        adminPanelSection.classList.add('hidden');
+    }
+    
+    showModal('settingsModal');
+}
+
+function closeSettingsModal() {
+    hideModal('settingsModal');
+    document.getElementById('passwordForm').reset();
+}
+
+function closeLoginModal() {
+    if (currentUser) {
+        hideModal('loginModal');
+    }
+}
+
+function closeRegisterModal() {
+    if (currentUser) {
+        hideModal('registerModal');
+    }
+}
+
+// ============================================================================
+// Admin Panel Functions
+// ============================================================================
+
+function showAdminUsersModal() {
+    if (!currentUser || !currentUser.is_admin) {
+        showToast('Admin access required', 'error');
+        return;
+    }
+    showModal('adminUsersModal');
+    loadAdminUsers();
+}
+
+function closeAdminUsersModal() {
+    hideModal('adminUsersModal');
+    document.getElementById('adminCreateUserForm').reset();
+}
+
+function loadAdminUsers() {
+    fetch('/api/auth/admin/users', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+    })
+    .then(users => {
+        const usersList = document.getElementById('adminUsersList');
+        if (!users || users.length === 0) {
+            usersList.innerHTML = '<p class="text-gray-400 text-center py-4">No users found</p>';
+            return;
+        }
+        
+        usersList.innerHTML = users.map(user => `
+            <div class="border border-gray-700 rounded p-3 mb-2 bg-gray-800">
+                <div class="flex justify-between items-center mb-2">
+                    <div class="flex-1">
+                        <div class="font-semibold text-white">${escapeHtml(user.username)}</div>
+                        <div class="text-sm text-gray-400">${escapeHtml(user.email)}</div>
+                    </div>
+                    <div class="text-sm text-gray-400">
+                        ${user.is_admin ? '<span class="bg-red-900 text-red-200 px-2 py-1 rounded text-xs mr-2">Admin</span>' : ''}
+                        ${!user.is_active ? '<span class="bg-yellow-900 text-yellow-200 px-2 py-1 rounded text-xs">Inactive</span>' : ''}
+                    </div>
+                </div>
+                <div class="flex gap-2 flex-wrap">
+                    <button class="text-sm bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded" onclick="handleAdminToggleAdmin('${user.id}', ${!user.is_admin})">
+                        ${user.is_admin ? 'Remove Admin' : 'Make Admin'}
+                    </button>
+                    <button class="text-sm bg-yellow-600 hover:bg-yellow-700 text-white px-2 py-1 rounded" onclick="handleAdminToggleActive('${user.id}', ${!user.is_active})">
+                        ${user.is_active ? 'Deactivate' : 'Activate'}
+                    </button>
+                    ${currentUser.id !== user.id ? `<button class="text-sm bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded" onclick="handleAdminDeleteUser('${user.id}')">Delete</button>` : ''}
+                </div>
+            </div>
+        `).join('');
+    })
+    .catch(error => {
+        console.error('Error loading users:', error);
+        showToast('Failed to load users: ' + error.message, 'error');
+    });
+}
+
+function handleAdminCreateUser(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('adminNewUsername').value.trim();
+    const email = document.getElementById('adminNewEmail').value.trim();
+    const password = document.getElementById('adminNewPassword').value;
+    const isAdmin = document.getElementById('adminNewIsAdmin').checked;
+    
+    if (!username || !email || !password) {
+        showToast('Please fill in all fields', 'error');
+        return;
+    }
+    
+    fetch('/api/auth/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password, is_admin: isAdmin })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || `HTTP ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        showToast(`User ${username} created successfully`, 'success');
+        document.getElementById('adminCreateUserForm').reset();
+        loadAdminUsers();
+    })
+    .catch(error => {
+        console.error('Error creating user:', error);
+        showToast('Failed to create user: ' + error.message, 'error');
+    });
+}
+
+function handleAdminToggleAdmin(userId, makeAdmin) {
+    const action = makeAdmin ? 'make admin' : 'remove admin';
+    if (!confirm(`Are you sure you want to ${action}?`)) return;
+    
+    fetch(`/api/auth/admin/users/${userId}/toggle-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || `HTTP ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        showToast(`User ${data.username} ${makeAdmin ? 'is now admin' : 'is no longer admin'}`, 'success');
+        loadAdminUsers();
+    })
+    .catch(error => {
+        console.error('Error toggling admin:', error);
+        showToast('Failed to toggle admin: ' + error.message, 'error');
+    });
+}
+
+function handleAdminToggleActive(userId, activate) {
+    const action = activate ? 'activate' : 'deactivate';
+    if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+    
+    fetch(`/api/auth/admin/users/${userId}/toggle-active`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || `HTTP ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        showToast(`User ${data.username} is now ${activate ? 'active' : 'inactive'}`, 'success');
+        loadAdminUsers();
+    })
+    .catch(error => {
+        console.error('Error toggling active:', error);
+        showToast('Failed to toggle user status: ' + error.message, 'error');
+    });
+}
+
+function handleAdminDeleteUser(userId) {
+    if (!confirm('Are you sure you want to delete this user? This cannot be undone.')) return;
+    
+    fetch(`/api/auth/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || `HTTP ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        showToast('User deleted successfully', 'success');
+        loadAdminUsers();
+    })
+    .catch(error => {
+        console.error('Error deleting user:', error);
+        showToast('Failed to delete user: ' + error.message, 'error');
+    });
+}
+
+// Helper function to escape HTML entities
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// ============================================================================
 // Initialization
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadSubnets();
-    loadStats();
+    // Check auth status first
+    checkAuthStatus().then(isAuthenticated => {
+        if (isAuthenticated) {
+            loadSubnets();
+            loadStats();
+        }
+    });
     
     // Keyboard shortcuts
     document.addEventListener('keydown', handleKeyboard);
@@ -130,6 +538,7 @@ async function loadStats() {
 
 async function loadSubnets() {
     try {
+        console.log('[Subnets] Loading subnets...');
         const params = new URLSearchParams();
         const search = document.getElementById('globalSearch')?.value || '';
         const environment = document.getElementById('filterEnvironment')?.value || '';
@@ -141,16 +550,24 @@ async function loadSubnets() {
         if (vlan) params.append('vlan', vlan);
         params.append('sort', sortBy);
         
+        console.log('[Subnets] Fetching from /api/subnets?', params.toString());
         const response = await fetch(`/api/subnets?${params}`);
+        console.log('[Subnets] Response status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         allSubnets = await response.json();
+        console.log('[Subnets] Loaded', allSubnets.length, 'subnets');
         renderSubnets(allSubnets);
         loadStats();
     } catch (error) {
-        console.error('Error loading subnets:', error);
+        console.error('[Subnets] Error loading subnets:', error);
         document.getElementById('subnetsContainer').innerHTML = `
             <div class="col-span-full text-center py-12 text-red-500">
                 <i class="fas fa-exclamation-triangle text-3xl mb-3"></i>
-                <p>Error loading subnets</p>
+                <p>Error loading subnets: ${error.message}</p>
             </div>
         `;
     }

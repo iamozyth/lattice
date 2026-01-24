@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request, render_template, send_from_directory, current_app
+from flask_login import login_required, current_user
 from app import db
 from app.models import Subnet, IP, ip_sort_key
 from app.scanner import NetworkScanner, scan_jobs
@@ -22,6 +23,7 @@ main_bp = Blueprint('main', __name__)
 # ============================================================================
 
 @api_bp.route('/stats', methods=['GET'])
+@login_required
 def get_stats():
     """Get dashboard statistics"""
     total_subnets = Subnet.query.count()
@@ -69,6 +71,7 @@ def get_stats():
 # ============================================================================
 
 @api_bp.route('/subnets', methods=['GET'])
+@login_required
 def get_subnets():
     """Get all subnets with optional filtering"""
     search = request.args.get('search', '')
