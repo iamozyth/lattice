@@ -1,7 +1,8 @@
 """Network scanning and discovery module for IPAM"""
-import nmap
+import subprocess
 import socket
 import logging
+import ipaddress
 from datetime import datetime
 from app import db
 from app.models import Subnet, IP
@@ -13,15 +14,19 @@ class NetworkScanner:
     """Performs network scans and discovers live hosts"""
     
     def __init__(self):
+        self._nmap_available = self._check_nmap()
+    
+    def _check_nmap(self):
+        """Check if nmap is installed and available"""
         try:
-            self.nm = nmap.PortScanner()
-        except nmap.PortScannerError as e:
-            logger.error(f"Nmap not available: {e}")
-            self.nm = None
+            result = subprocess.run(['nmap', '--version'], capture_output=True, text=True, timeout=5)
+            return result.returncode == 0
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            return False
     
     def is_available(self):
         """Check if nmap is available"""
-        return self.nm is not None
+        return self._nmap_available
     
     def scan_subnet(self, subnet_cidr, scan_type='ping'):
         """
@@ -42,18 +47,17 @@ class NetworkScanner:
             
             if scan_type == 'ping':
                 # Fast ping scan to discover live hosts
-                arguments = '-sn'  # Ping scan, no port scan
+                cmd = ['nmap', '-sn', subnet_cidr]
             else:
                 # More detailed scan with OS and service detection
-                arguments = '-sV -O --script smb-os-discovery'
+                cmd = ['nmap', '-sV', '-O', '--script', 'smb-os-discovery', subnet_cidr]
             
-            self.nm.scan(hosts=subnet_cidr, arguments=arguments, timeout=300)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
             
-            discovered = []
-            for host in self.nm.all_hosts():
-                if self.nm[host].state()['state'] == 'up':
-                    host_info = self._extract_host_info(host)
-                    discovered.append(host_info)
+            if result.returncode not in [0, 1]:  # 1 is normal for nmap (some hosts down)
+                return {'error': f'Nmap scan failed: {result.stderr}', 'discovered': []}
+            
+            discovered = self._parse_nmap_output(result.stdout)
             
             logger.info(f"Scan complete. Found {len(discovered)} live hosts in {subnet_cidr}")
             return {
@@ -64,58 +68,59 @@ class NetworkScanner:
                 'discovered': discovered
             }
         
+        except subprocess.TimeoutExpired:
+            return {'error': 'Scan timeout (>10 minutes)', 'discovered': []}
         except Exception as e:
             logger.error(f"Scan error for {subnet_cidr}: {str(e)}")
-            return {
-                'error': str(e),
-                'subnet': subnet_cidr,
-                'discovered': []
-            }
+            return {'error': str(e), 'subnet': subnet_cidr, 'discovered': []}
     
-    def _extract_host_info(self, host):
-        """Extract enriched information about a discovered host"""
-        info = {
-            'address': host,
-            'status': 'discovered',
-            'hostname': None,
-            'mac_address': None,
-            'manufacturer': None,
-            'os_info': None,
-            'open_ports': []
-        }
+    def _parse_nmap_output(self, output):
+        """Parse nmap output to extract discovered hosts"""
+        discovered = []
+        lines = output.split('\n')
         
-        # Attempt reverse DNS lookup
+        for line in lines:
+            line = line.strip()
+            # Look for "Nmap scan report for" lines indicating a live host
+            if line.startswith('Nmap scan report for'):
+                parts = line.split()
+                if len(parts) >= 5:
+                    host_info = parts[-1].strip('()')
+                    # Extract IP (last part, typically in parentheses or plain)
+                    try:
+                        # Try to parse as IP
+                        ip_str = host_info
+                        # Basic IP validation
+                        if self._is_valid_ip(ip_str):
+                            info = {
+                                'address': ip_str,
+                                'status': 'discovered',
+                                'hostname': None,
+                                'mac_address': None,
+                                'manufacturer': None,
+                                'os_info': None,
+                                'open_ports': []
+                            }
+                            
+                            # Try reverse DNS lookup
+                            try:
+                                info['hostname'] = socket.gethostbyaddr(ip_str)[0]
+                            except (socket.herror, socket.gaierror):
+                                pass
+                            
+                            discovered.append(info)
+                    except:
+                        pass
+        
+        return discovered
+    
+    def _is_valid_ip(self, ip_str):
+        """Check if string is a valid IP address"""
         try:
-            info['hostname'] = socket.gethostbyaddr(host)[0]
-        except (socket.herror, socket.gaierror):
-            pass
-        
-        # Extract MAC address if available
-        if 'mac' in self.nm[host]['addresses']:
-            info['mac_address'] = self.nm[host]['addresses']['mac']
-        
-        # Try to get vendor/manufacturer info
-        if 'osmatch' in self.nm[host]:
-            matches = self.nm[host]['osmatch']
-            if matches:
-                info['os_info'] = matches[0]['name']
-        
-        # Extract open ports
-        try:
-            for proto in self.nm[host].all_protocols():
-                ports = self.nm[host][proto].keys()
-                for port in ports:
-                    state = self.nm[host][proto][port]['state']
-                    if state == 'open':
-                        info['open_ports'].append({
-                            'port': port,
-                            'protocol': proto,
-                            'service': self.nm[host][proto][port].get('name', 'unknown')
-                        })
+            ipaddress.ip_address(ip_str)
+            return True
         except:
-            pass
-        
-        return info
+            return False
     
     def recommend_ips_for_subnet(self, subnet_id, discovered_hosts):
         """
@@ -146,23 +151,13 @@ class NetworkScanner:
             if not subnet.contains_ip(ip):
                 continue
             
-            confidence = 0.5  # Base confidence
-            device_type = 'unknown'
+            confidence = 0.8  # Higher base confidence since host responded to ping
+            device_type = 'Unknown Device'
             
             # Increase confidence based on enriched data
             if host.get('hostname'):
-                confidence = min(1.0, confidence + 0.2)
-            
-            if host.get('mac_address'):
                 confidence = min(1.0, confidence + 0.15)
-                device_type = self._infer_device_type(host.get('mac_address'), host.get('os_info'))
-            
-            if host.get('os_info'):
-                confidence = min(1.0, confidence + 0.15)
-            
-            # Penalize for too many open ports (might be a false positive)
-            if len(host.get('open_ports', [])) > 20:
-                confidence *= 0.8
+                device_type = host.get('hostname')
             
             recommendations.append({
                 'address': ip,
@@ -179,42 +174,6 @@ class NetworkScanner:
         recommendations.sort(key=lambda x: x['confidence'], reverse=True)
         return recommendations
     
-    def _infer_device_type(self, mac_address, os_info):
-        """Infer device type from MAC address vendor and OS info"""
-        # Common MAC address prefixes (first 3 octets)
-        mac_prefixes = {
-            '00:1A:2B': 'Router',
-            '00:1C:23': 'Network Device',
-            '00:50:F2': 'Microsoft',
-            '08:00:27': 'VirtualBox',
-            '00:0C:29': 'VMware',
-            '52:54:00': 'KVM/QEMU',
-        }
-        
-        prefix = mac_address[:8].upper() if mac_address else ''
-        
-        for mac_prefix, device_type in mac_prefixes.items():
-            if prefix.startswith(mac_prefix):
-                return device_type
-        
-        # Infer from OS info
-        if os_info:
-            os_lower = os_info.lower()
-            if 'printer' in os_lower:
-                return 'Printer'
-            elif 'router' in os_lower or 'firewall' in os_lower:
-                return 'Router'
-            elif 'switch' in os_lower:
-                return 'Switch'
-            elif 'linux' in os_lower:
-                return 'Server'
-            elif 'windows' in os_lower:
-                return 'Workstation'
-            elif 'mac' in os_lower:
-                return 'Workstation'
-        
-        return 'Unknown Device'
-    
     def verify_ip_status(self, ip_address, subnet_id):
         """
         Verify if an IP is currently live/responsive
@@ -230,9 +189,10 @@ class NetworkScanner:
             return {'error': 'Nmap not available', 'verified': False}
         
         try:
-            self.nm.scan(hosts=ip_address, arguments='-sn', timeout=10)
+            cmd = ['nmap', '-sn', ip_address]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
             
-            is_live = self.nm[ip_address].state()['state'] == 'up'
+            is_live = 'up' in result.stdout.lower() and result.returncode in [0, 1]
             
             # Update last_seen if live
             if is_live:
@@ -247,6 +207,9 @@ class NetworkScanner:
                 'verified_at': datetime.utcnow().isoformat()
             }
         
+        except subprocess.TimeoutExpired:
+            return {'error': 'Verification timeout', 'address': ip_address, 'verified': False}
         except Exception as e:
             logger.error(f"Verification error for {ip_address}: {str(e)}")
             return {'error': str(e), 'address': ip_address, 'verified': False}
+
