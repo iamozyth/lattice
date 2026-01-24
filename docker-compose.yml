@@ -2,8 +2,6 @@ services:
   ipam-db:
     image: postgres:15-alpine
     container_name: ipam-db
-    env_file:
-      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-netdoc_service}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-u4Jz9qT!sV@1fX8pN2rL0wC5}
@@ -28,8 +26,6 @@ services:
     container_name: ipam-web
     ports:
       - "0.0.0.0:5001:5000"
-    env_file:
-      - .env
     environment:
       FLASK_ENV: ${FLASK_ENV:-production}
       FLASK_RUN_HOST: 0.0.0.0

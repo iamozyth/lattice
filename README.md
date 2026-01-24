@@ -50,12 +50,13 @@ git clone <repository-url> netdoc-ipam
 cd netdoc-ipam
 ```
 
-2. Copy the environment template and set credentials (never commit the real .env):
+2. (Optional) Copy the environment template and set credentials locally (never commit the real .env). For Portainer stacks you can also set env vars directly in the UI:
 ```bash
 cp .env.example .env
 # edit .env with strong, org-approved values
 # generate a fresh password: openssl rand -base64 24
 ```
+	- Portainer: either set the variables in the stack form or upload/place `.env` alongside the compose file.
 
 3. Start the application:
 ```bash
