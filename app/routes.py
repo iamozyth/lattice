@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, render_template, send_from_directory
+from flask import Blueprint, jsonify, request, render_template, send_from_directory, current_app
 from app import db
 from app.models import Subnet, IP, ip_sort_key
 from app.scanner import NetworkScanner
@@ -12,6 +12,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 scanner = NetworkScanner()
+
+# Get the directory where routes.py is located (app folder)
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 static_bp = Blueprint('static', __name__)
@@ -915,9 +918,9 @@ def verify_ip():
 
 @static_bp.route('/css/<path:filename>')
 def serve_css(filename):
-    return send_from_directory('static/css', filename)
+    return send_from_directory(os.path.join(APP_DIR, 'static/css'), filename)
 
 
 @static_bp.route('/js/<path:filename>')
 def serve_js(filename):
-    return send_from_directory('static/js', filename)
+    return send_from_directory(os.path.join(APP_DIR, 'static/js'), filename)
