@@ -93,6 +93,9 @@ docker-compose up -d
 ### Networks
 - `ipam-network` - Internal bridge network
 
+### Exposure
+- Database is not published to the host; it is only reachable on the internal docker network (5432 exposed internally only)
+
 ### Environment Variables
 
 All sensitive values are loaded from `.env` (see `.env.example`).

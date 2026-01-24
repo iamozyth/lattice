@@ -8,6 +8,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-netdoc_service}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-u4Jz9qT!sV@1fX8pN2rL0wC5}
       POSTGRES_DB: ${POSTGRES_DB:-netdoc_prod}
+    expose:
+      - "5432"
     volumes:
       - ipam_db_data:/var/lib/postgresql/data
     networks:
