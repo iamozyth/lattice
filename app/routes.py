@@ -1,10 +1,9 @@
-from flask import Blueprint, jsonify, request, render_template, send_from_directory, current_app
+from flask import Blueprint, jsonify, request, render_template
 from app import db
 from app.models import Subnet, IP, ip_sort_key
 from app.scanner import NetworkScanner
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
-import os
 import json
 import ipaddress
 from datetime import datetime
@@ -13,11 +12,8 @@ import logging
 logger = logging.getLogger(__name__)
 scanner = NetworkScanner()
 
-# Get the directory where routes.py is located (app folder)
-APP_DIR = os.path.dirname(os.path.abspath(__file__))
-
 api_bp = Blueprint('api', __name__, url_prefix='/api')
-static_bp = Blueprint('static', __name__)
+main_bp = Blueprint('main', __name__)
 
 
 # ============================================================================
@@ -693,7 +689,7 @@ def get_device_types():
 # Frontend Routes
 # ============================================================================
 
-@static_bp.route('/')
+@main_bp.route('/')
 def index():
     return render_template('index.html')
 
@@ -914,13 +910,3 @@ def verify_ip():
     except Exception as e:
         logger.error(f"IP verification error: {str(e)}")
         return jsonify({'error': str(e)}), 500
-
-
-@static_bp.route('/css/<path:filename>')
-def serve_css(filename):
-    return send_from_directory(os.path.join(APP_DIR, 'static/css'), filename)
-
-
-@static_bp.route('/js/<path:filename>')
-def serve_js(filename):
-    return send_from_directory(os.path.join(APP_DIR, 'static/js'), filename)

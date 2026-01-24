@@ -11,7 +11,12 @@ logger = logging.getLogger(__name__)
 db = SQLAlchemy()
 
 def create_app():
-    app = Flask(__name__)
+    # Get the directory where this file is located
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    
+    app = Flask(__name__,
+                static_folder=os.path.join(basedir, 'static'),
+                template_folder=os.path.join(basedir, 'templates'))
     
     # Configuration
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
@@ -25,12 +30,9 @@ def create_app():
     CORS(app)
     
     # Register blueprints
-    from app.routes import api_bp
+    from app.routes import api_bp, main_bp
     app.register_blueprint(api_bp)
-    
-    # Register static files
-    from app.routes import static_bp
-    app.register_blueprint(static_bp)
+    app.register_blueprint(main_bp)
     
     # Create tables with retry logic
     with app.app_context():
