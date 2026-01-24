@@ -1,11 +1,12 @@
-from flask import Blueprint, jsonify, request, render_template
+from flask import Blueprint, jsonify, request, render_template, send_from_directory, current_app
 from app import db
 from app.models import Subnet, IP, ip_sort_key
-from app.scanner import NetworkScanner
+from app.scanner import NetworkScanner, scan_jobs
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 import json
 import ipaddress
+import os
 from datetime import datetime
 import logging
 
@@ -694,6 +695,17 @@ def index():
     return render_template('index.html')
 
 
+# Fallback static routes (ensure JS/CSS load even if proxied differently)
+@main_bp.route('/js/<path:filename>')
+def serve_js(filename):
+    return send_from_directory(os.path.join(current_app.static_folder, 'js'), filename)
+
+
+@main_bp.route('/css/<path:filename>')
+def serve_css(filename):
+    return send_from_directory(os.path.join(current_app.static_folder, 'css'), filename)
+
+
 # ============================================================================
 # Network Scanning Routes
 # ============================================================================
@@ -754,6 +766,54 @@ def scan_subnet(subnet_id):
     except Exception as e:
         logger.error(f"Scan error: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/scanner/scan-subnet/<int:subnet_id>/start', methods=['POST'])
+def scan_subnet_start(subnet_id):
+    """Start an asynchronous subnet scan and return a job id"""
+    if not scanner.is_available():
+        return jsonify({'error': 'Nmap scanner not available'}), 503
+
+    subnet = Subnet.query.get(subnet_id)
+    if not subnet:
+        return jsonify({'error': 'Subnet not found'}), 404
+
+    data = request.get_json() or {}
+    scan_type = data.get('scan_type', 'ping')
+
+    try:
+        job_id = scan_jobs.start_scan(subnet.cidr, scan_type)
+        return jsonify({
+            'job_id': job_id,
+            'subnet_id': subnet_id,
+            'subnet_name': subnet.name,
+            'subnet_cidr': subnet.cidr,
+            'scan_type': scan_type
+        }), 202
+    except Exception as e:
+        logger.error(f"Failed to start async scan: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/scanner/scan-jobs/<string:job_id>', methods=['GET'])
+def scan_job_status(job_id):
+    """Get the current status, logs, and partial results for a scan job"""
+    job = scan_jobs.get_job(job_id)
+    if not job:
+        return jsonify({'error': 'Job not found'}), 404
+
+    return jsonify({
+        'id': job['id'],
+        'status': job['status'],
+        'subnet': job['subnet'],
+        'scan_type': job['scan_type'],
+        'logs': job['logs'],
+        'discovered': job['discovered'],
+        'started_at': job['started_at'],
+        'finished_at': job['finished_at'],
+        'total_discovered': job['total_discovered'],
+        'error': job['error']
+    })
 
 
 @api_bp.route('/scanner/bulk-import', methods=['POST'])

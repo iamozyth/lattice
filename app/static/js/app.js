@@ -9,6 +9,33 @@ let allSubnets = [];
 let allIPs = [];
 let currentSubnetData = null;
 let currentTab = 'subnets';
+let restoreDetailAfterIPModal = false;
+let scanInProgress = false;
+let currentScanJobId = null;
+let currentScanDiscovered = [];
+
+// Simple helpers to show/hide modals reliably (since we don't have Tailwind utilities built)
+function showModal(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.classList.remove('hidden');
+    el.style.display = 'flex';
+    el.style.alignItems = 'center';
+    el.style.justifyContent = 'center';
+}
+
+function hideModal(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.classList.add('hidden');
+    el.style.display = 'none';
+}
+
+function isModalVisible(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return false;
+    return !el.classList.contains('hidden') && el.style.display !== 'none';
+}
 
 // ============================================================================
 // Initialization
@@ -343,11 +370,12 @@ function showSubnetModal() {
     currentSubnetId = null;
     document.getElementById('modalTitle').textContent = 'New Subnet';
     document.getElementById('subnetForm').reset();
-    document.getElementById('subnetModal').classList.remove('hidden');
+    showModal('subnetModal');
+    console.debug('showSubnetModal invoked, modal should now be visible');
 }
 
 function closeSubnetModal() {
-    document.getElementById('subnetModal').classList.add('hidden');
+    hideModal('subnetModal');
 }
 
 async function saveSubnet(event) {
@@ -433,8 +461,7 @@ async function viewSubnetDetail(id) {
         
         // Load next available IP
         loadNextAvailableIP();
-        
-        document.getElementById('detailModal').classList.remove('hidden');
+        showModal('detailModal');
     } catch (error) {
         console.error('Error loading subnet detail:', error);
         showToast('Error loading subnet details', 'error');
@@ -499,7 +526,7 @@ function filterDetailIPs() {
 }
 
 function closeDetailModal() {
-    document.getElementById('detailModal').classList.add('hidden');
+    hideModal('detailModal');
     currentSubnetData = null;
 }
 
@@ -545,6 +572,202 @@ async function deleteCurrentSubnet() {
 }
 
 // ============================================================================
+// Subnet Scanning (Async with Live Logs)
+// ============================================================================
+
+function showScanModal() {
+    if (!currentSubnetId) return;
+    // Reset UI
+    currentScanJobId = null;
+    currentScanDiscovered = [];
+    document.querySelector('input[name="scanType"][value="ping"]').checked = true;
+    document.getElementById('scanLogs').textContent = '';
+    document.getElementById('scanDiscoveredList').innerHTML = '';
+    document.getElementById('scanDiscoveredCount').textContent = '0 hosts discovered';
+    document.getElementById('scanProgressBar').style.width = '0%';
+    document.getElementById('scanImportControls').classList.add('hidden');
+    const btn = document.getElementById('startScanBtn');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-play mr-2"></i>Start Scan';
+    showModal('scanModal');
+}
+
+function closeScanModal() {
+    hideModal('scanModal');
+}
+
+async function startScanJob() {
+    if (!currentSubnetId || scanInProgress) return;
+    const type = document.querySelector('input[name="scanType"]:checked')?.value || 'ping';
+    scanInProgress = true;
+    const btn = document.getElementById('startScanBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Starting...';
+
+    try {
+        const res = await fetch(`/api/scanner/scan-subnet/${currentSubnetId}/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scan_type: type })
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) {
+            showToast(data.error || 'Failed to start scan', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-play mr-2"></i>Start Scan';
+            scanInProgress = false;
+            return;
+        }
+        currentScanJobId = data.job_id;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
+        pollScanJob();
+    } catch (e) {
+        console.error('Error starting scan job:', e);
+        showToast('Error starting scan', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-play mr-2"></i>Start Scan';
+        scanInProgress = false;
+    }
+}
+
+async function pollScanJob() {
+    if (!currentScanJobId) return;
+    try {
+        const res = await fetch(`/api/scanner/scan-jobs/${currentScanJobId}`);
+        const job = await res.json();
+        if (!res.ok || job.error) {
+            showToast(job.error || 'Scan error', 'error');
+            scanInProgress = false;
+            document.getElementById('startScanBtn').disabled = false;
+            document.getElementById('startScanBtn').innerHTML = '<i class="fas fa-play mr-2"></i>Start Scan';
+            return;
+        }
+
+        // Update logs
+        const logsEl = document.getElementById('scanLogs');
+        logsEl.textContent = (job.logs || []).join('\n');
+        logsEl.scrollTop = logsEl.scrollHeight;
+
+        // Update discovered list
+        currentScanDiscovered = job.discovered || [];
+        document.getElementById('scanDiscoveredCount').textContent = `${currentScanDiscovered.length} host(s) discovered`;
+        renderScanDiscovered(currentScanDiscovered);
+
+        // Update progress bar (indeterminate until complete)
+        const bar = document.getElementById('scanProgressBar');
+        bar.style.width = job.status === 'completed' ? '100%' : (bar.style.width === '0%' ? '25%' : bar.style.width);
+
+        if (job.status === 'completed') {
+            scanInProgress = false;
+            const btn = document.getElementById('startScanBtn');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-rotate-right mr-2"></i>Run Again';
+            document.getElementById('scanImportControls').classList.remove('hidden');
+            showToast(`Scan complete: ${job.total_discovered} host(s) found`, 'success');
+            return;
+        }
+
+        if (job.status === 'error') {
+            scanInProgress = false;
+            const btn = document.getElementById('startScanBtn');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-play mr-2"></i>Start Scan';
+            showToast('Scan failed', 'error');
+            return;
+        }
+
+        // Continue polling
+        setTimeout(pollScanJob, 1000);
+    } catch (e) {
+        console.error('Error polling scan job:', e);
+        setTimeout(pollScanJob, 1500);
+    }
+}
+
+function renderScanDiscovered(items) {
+    const list = document.getElementById('scanDiscoveredList');
+    if (!items || items.length === 0) {
+        list.innerHTML = '<p class="text-sm text-gray-500">No hosts discovered yet...</p>';
+        return;
+    }
+    list.innerHTML = items.map((h, idx) => `
+        <label class="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-100">
+            <input type="checkbox" class="mt-1.5" data-sel-index="${idx}" checked>
+            <div class="flex-1">
+                <div class="flex items-center gap-2">
+                    <span class="font-mono font-semibold text-gray-800">${h.address}</span>
+                    ${h.hostname ? `<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">${escapeHtml(h.hostname)}</span>` : ''}
+                </div>
+                <div class="text-xs text-gray-600 mt-1">
+                    ${h.mac_address ? `<span class="mr-2">MAC: <span class="font-mono">${escapeHtml(h.mac_address)}</span></span>` : ''}
+                    ${h.manufacturer ? `<span class="mr-2">${escapeHtml(h.manufacturer)}</span>` : ''}
+                </div>
+                ${Array.isArray(h.open_ports) && h.open_ports.length ? `
+                <div class="text-xs text-gray-700 mt-1">
+                    Ports: ${h.open_ports.slice(0,5).map(p => `${p.port}/${p.proto} ${escapeHtml(p.service || '')}`).join(', ')}
+                    ${h.open_ports.length > 5 ? '…' : ''}
+                </div>` : ''}
+                ${h.os_info ? `<div class="text-xs text-gray-700 mt-1">OS: ${escapeHtml(h.os_info)}</div>` : ''}
+            </div>
+        </label>
+    `).join('');
+}
+
+async function importScanResults(importAll) {
+    if (!currentSubnetId) return;
+    const fields = {
+        hostname: document.getElementById('importHostname').checked,
+        mac: document.getElementById('importMAC').checked,
+        device: document.getElementById('importDeviceType').checked,
+        os: document.getElementById('importOS').checked
+    };
+
+    let selected = [];
+    if (importAll) {
+        selected = currentScanDiscovered.slice();
+    } else {
+        const checks = Array.from(document.querySelectorAll('#scanDiscoveredList input[type="checkbox"][data-sel-index]'));
+        const indices = checks.filter(c => c.checked).map(c => parseInt(c.getAttribute('data-sel-index')));
+        selected = indices.map(i => currentScanDiscovered[i]).filter(Boolean);
+    }
+
+    if (!selected.length) {
+        showToast('No hosts selected to import', 'warning');
+        return;
+    }
+
+    const payloadIps = selected.map(h => ({
+        address: h.address,
+        status: 'in-use',
+        ...(fields.hostname && h.hostname ? { hostname: h.hostname } : {}),
+        ...(fields.mac && h.mac_address ? { mac_address: h.mac_address } : {}),
+        ...(fields.device && h.open_ports && h.open_ports.length ? { device_type: (h.open_ports[0].service || 'Unknown Device') } : {}),
+        ...(fields.os && h.os_info ? { os_info: h.os_info } : {})
+    }));
+
+    try {
+        const res = await fetch('/api/scanner/bulk-import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subnet_id: currentSubnetId, ips: payloadIps, auto_enrich: true })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            showToast(data.error || 'Import failed', 'error');
+            return;
+        }
+        showToast(`${data.imported_count} imported, ${data.failed_count} failed`, 'success');
+        // Refresh subnet details and stats
+        viewSubnetDetail(currentSubnetId);
+        loadStats();
+        closeScanModal();
+    } catch (e) {
+        console.error('Error importing scan results:', e);
+        showToast('Error importing results', 'error');
+    }
+}
+
+// ============================================================================
 // IP Modal
 // ============================================================================
 
@@ -583,8 +806,9 @@ function showIPModal() {
     document.getElementById('nextAvailableIP').classList.remove('hidden');
     
     loadNextAvailableIP();
-    
-    document.getElementById('ipModal').classList.remove('hidden');
+    restoreDetailAfterIPModal = isModalVisible('detailModal');
+    if (restoreDetailAfterIPModal) hideModal('detailModal');
+    showModal('ipModal');
 }
 
 function editIP(ip) {
@@ -604,12 +828,18 @@ function editIP(ip) {
     document.getElementById('ipOwner').value = ip.owner || '';
     document.getElementById('ipDepartment').value = ip.department || '';
     document.getElementById('ipNotes').value = ip.notes || '';
-    
-    document.getElementById('ipModal').classList.remove('hidden');
+
+    restoreDetailAfterIPModal = isModalVisible('detailModal');
+    if (restoreDetailAfterIPModal) hideModal('detailModal');
+    showModal('ipModal');
 }
 
 function closeIPModal() {
-    document.getElementById('ipModal').classList.add('hidden');
+    hideModal('ipModal');
+    if (restoreDetailAfterIPModal) {
+        showModal('detailModal');
+        restoreDetailAfterIPModal = false;
+    }
     currentIPId = null;
 }
 
@@ -680,11 +910,11 @@ async function deleteIP(ipId) {
 
 function showBulkAddModal() {
     document.getElementById('bulkIPs').value = '';
-    document.getElementById('bulkModal').classList.remove('hidden');
+    showModal('bulkModal');
 }
 
 function closeBulkModal() {
-    document.getElementById('bulkModal').classList.add('hidden');
+    hideModal('bulkModal');
 }
 
 async function processBulkAdd() {
@@ -738,12 +968,12 @@ async function processBulkAdd() {
 function showIPLookupModal() {
     document.getElementById('lookupIP').value = '';
     document.getElementById('lookupResult').classList.add('hidden');
-    document.getElementById('lookupModal').classList.remove('hidden');
+    showModal('lookupModal');
     document.getElementById('lookupIP').focus();
 }
 
 function closeLookupModal() {
-    document.getElementById('lookupModal').classList.add('hidden');
+    hideModal('lookupModal');
 }
 
 async function performIPLookup() {

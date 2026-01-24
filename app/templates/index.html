@@ -27,29 +27,48 @@
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
         
         .progress-bar { transition: width 0.3s ease-in-out; }
+
+        .hidden { display: none; }
+        .sm\:flex { display: none; }
+        @media (min-width: 640px) { .sm\:flex { display: flex; } }
+        .sm\:hidden { display: inline-flex; }
+        @media (min-width: 640px) { .sm\:hidden { display: none; } }
         
-        .status-available { @apply bg-emerald-100 text-emerald-800 border border-emerald-200; }
-        .status-in-use { @apply bg-blue-100 text-blue-800 border border-blue-200; }
-        .status-reserved { @apply bg-amber-100 text-amber-800 border border-amber-200; }
-        .status-blocked { @apply bg-red-100 text-red-800 border border-red-200; }
-        .status-dhcp { @apply bg-purple-100 text-purple-800 border border-purple-200; }
-        .status-deprecated { @apply bg-gray-100 text-gray-800 border border-gray-200; }
+        .status-available { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+        .status-in-use { background-color: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        .status-reserved { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .status-blocked { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+        .status-dhcp { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+        .status-deprecated { background-color: #f3f4f6; color: #1f2937; border: 1px solid #e5e7eb; }
         
-        .env-prod { @apply border-l-red-500; }
-        .env-staging { @apply border-l-amber-500; }
-        .env-dev { @apply border-l-green-500; }
-        .env-test { @apply border-l-blue-500; }
+        .env-prod { border-left: 4px solid #ef4444; }
+        .env-staging { border-left: 4px solid #f59e0b; }
+        .env-dev { border-left: 4px solid #10b981; }
+        .env-test { border-left: 4px solid #2563eb; }
         
-        .subnet-card { @apply bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-primary-200 transition-all duration-200 cursor-pointer; }
+        .subnet-card { background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06); border: 1px solid #e5e7eb; transition: all 0.2s ease; cursor: pointer; }
+        .subnet-card:hover { box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08); border-color: #bfdbfe; }
         
-        .modal-overlay { @apply fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.55); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 50; }
         
-        .input-field { @apply w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition-all; }
+        .input-field { width: 100%; padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 10px; outline: none; transition: all 0.15s ease; }
+        .input-field:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
         
-        .btn-primary { @apply px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm; }
-        .btn-secondary { @apply px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 active:bg-gray-100 transition-colors; }
-        .btn-danger { @apply px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 active:bg-red-800 transition-colors shadow-sm; }
-        .btn-success { @apply px-4 py-2.5 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 active:bg-emerald-800 transition-colors shadow-sm; }
+        .btn-primary { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; background: #2563eb; color: #fff; border: none; border-radius: 10px; font-weight: 600; transition: background 0.15s ease, transform 0.1s ease; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-primary:active { background: #1e40af; transform: translateY(1px); }
+        
+        .btn-secondary { padding: 10px 14px; background: #fff; color: #374151; border: 1px solid #d1d5db; border-radius: 10px; font-weight: 600; transition: background 0.15s ease, transform 0.1s ease; }
+        .btn-secondary:hover { background: #f3f4f6; }
+        .btn-secondary:active { background: #e5e7eb; transform: translateY(1px); }
+        
+        .btn-danger { padding: 10px 14px; background: #dc2626; color: #fff; border: none; border-radius: 10px; font-weight: 600; transition: background 0.15s ease, transform 0.1s ease; }
+        .btn-danger:hover { background: #b91c1c; }
+        .btn-danger:active { background: #991b1b; transform: translateY(1px); }
+        
+        .btn-success { padding: 10px 14px; background: #059669; color: #fff; border: none; border-radius: 10px; font-weight: 600; transition: background 0.15s ease, transform 0.1s ease; }
+        .btn-success:hover { background: #047857; }
+        .btn-success:active { background: #065f46; transform: translateY(1px); }
         
         .sidebar { width: 280px; }
         .main-content { width: calc(100% - 280px); }
@@ -60,7 +79,7 @@
             .main-content { width: 100%; }
         }
         
-        .tab-active { @apply text-primary-600 border-b-2 border-primary-600; }
+        .tab-active { color: #2563eb; border-bottom: 2px solid #2563eb; }
         
         /* Custom scrollbar */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -531,6 +550,9 @@
                     <button onclick="showIPModal()" class="btn-success">
                         <i class="fas fa-plus mr-2"></i>Add IP
                     </button>
+                    <button id="scanSubnetBtn" onclick="showScanModal()" class="btn-secondary">
+                        <i class="fas fa-wifi mr-2"></i>Scan Subnet
+                    </button>
                     <button onclick="showBulkAddModal()" class="btn-secondary">
                         <i class="fas fa-layer-group mr-2"></i>Bulk Add
                     </button>
@@ -610,6 +632,72 @@
         </div>
     </div>
 
+    <!-- Scan Modal -->
+    <div id="scanModal" class="hidden modal-overlay fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4">
+            <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-5 flex justify-between items-center">
+                <h2 class="text-xl font-semibold">Scan Subnet</h2>
+                <button onclick="closeScanModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Scan Type</label>
+                        <div class="flex items-center gap-4 text-sm text-gray-700">
+                            <label class="flex items-center gap-2"><input type="radio" name="scanType" value="ping" checked> Ping (fast)</label>
+                            <label class="flex items-center gap-2"><input type="radio" name="scanType" value="full"> Full (detailed)</label>
+                        </div>
+                    </div>
+                    <div class="flex items-end justify-end">
+                        <button id="startScanBtn" onclick="startScanJob()" class="btn-primary">
+                            <i class="fas fa-play mr-2"></i>Start Scan
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium text-gray-700">Progress</span>
+                        <span id="scanDiscoveredCount" class="text-sm text-gray-500">0 hosts discovered</span>
+                    </div>
+                    <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div id="scanProgressBar" class="h-full bg-gradient-to-r from-indigo-500 to-indigo-400 progress-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Live Log</h4>
+                        <pre id="scanLogs" class="bg-gray-900 text-gray-100 text-xs rounded-lg p-3 h-64 overflow-auto"></pre>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Discovered Hosts</h4>
+                        <div id="scanDiscoveredList" class="bg-gray-50 border border-gray-200 rounded-lg p-3 h-64 overflow-auto space-y-2"></div>
+                    </div>
+                </div>
+
+                <div id="scanImportControls" class="hidden border-t border-gray-200 pt-4">
+                    <div class="flex flex-wrap items-center gap-4 mb-3 text-sm text-gray-700">
+                        <span class="font-medium">Import fields:</span>
+                        <label class="flex items-center gap-2"><input type="checkbox" id="importHostname" checked> Hostname</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" id="importMAC" checked> MAC</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" id="importDeviceType" checked> Device Type</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" id="importOS"> OS → Description</label>
+                    </div>
+                    <div class="flex gap-3 justify-end">
+                        <button onclick="importScanResults(true)" class="btn-success">
+                            <i class="fas fa-check-double mr-2"></i>Import All
+                        </button>
+                        <button onclick="importScanResults(false)" class="btn-primary">
+                            <i class="fas fa-check mr-2"></i>Import Selected
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Import Modal -->
     <div id="importModal" class="hidden modal-overlay fade-in">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4">
