@@ -343,6 +343,10 @@ function showSettingsModal() {
     document.getElementById('settingsEmail').textContent = currentUser.email;
     document.getElementById('settingsRole').textContent = currentUser.is_admin ? 'Administrator' : 'User';
     
+    // Load and display version
+    loadVersion();
+    checkForUpdates();
+    
     // Show/hide admin panel based on user role
     const adminPanelSection = document.getElementById('adminPanelSection');
     if (currentUser.is_admin) {
@@ -366,14 +370,23 @@ function switchSettingsTab(tab) {
     const userPane = document.getElementById('settingsUserPane');
     const systemPane = document.getElementById('settingsSystemPane');
     
-    const activate = (btn, pane, active) => {
-        if (!btn || !pane) return;
-        btn.classList.toggle('tab-active', active);
-        btn.classList.toggle('text-gray-500', !active);
-        pane.classList.toggle('hidden', !active);
-    };
-    activate(userTabBtn, userPane, tab === 'user');
-    activate(systemTabBtn, systemPane, tab === 'system');
+    if (tab === 'user') {
+        // User tab active
+        userTabBtn.classList.remove('text-gray-500', 'border-transparent');
+        userTabBtn.classList.add('text-primary-600', 'border-primary-600');
+        systemTabBtn.classList.remove('text-primary-600', 'border-primary-600');
+        systemTabBtn.classList.add('text-gray-500', 'border-transparent');
+        userPane.classList.remove('hidden');
+        systemPane.classList.add('hidden');
+    } else {
+        // System tab active
+        systemTabBtn.classList.remove('text-gray-500', 'border-transparent');
+        systemTabBtn.classList.add('text-primary-600', 'border-primary-600');
+        userTabBtn.classList.remove('text-primary-600', 'border-primary-600');
+        userTabBtn.classList.add('text-gray-500', 'border-transparent');
+        systemPane.classList.remove('hidden');
+        userPane.classList.add('hidden');
+    }
 }
 
 function closeLoginModal() {
