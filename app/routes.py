@@ -134,15 +134,17 @@ def get_subnets():
 
 
 @api_bp.get('/subnets/<int:id>', tags=[tag_subnets])
-def get_subnet(id):
+def get_subnet(**kwargs):
     """Get a specific subnet with its IPs"""
+    id = request.view_args['id']
     subnet = Subnet.query.get_or_404(id)
     return jsonify(subnet.to_dict(include_ips=True))
 
 
 @api_bp.get('/subnets/<int:id>/available-ips', tags=[tag_subnets])
-def get_available_ips(id):
+def get_available_ips(**kwargs):
     """Get available IPs in a subnet"""
+    id = request.view_args['id']
     subnet = Subnet.query.get_or_404(id)
     limit = request.args.get('limit', 50, type=int)
     return jsonify({
@@ -206,8 +208,9 @@ def create_subnet():
 
 
 @api_bp.put('/subnets/<int:id>', tags=[tag_subnets])
-def update_subnet(id):
+def update_subnet(**kwargs):
     """Update a subnet"""
+    id = request.view_args['id']
     try:
         subnet = Subnet.query.get_or_404(id)
         data = request.json
@@ -254,8 +257,9 @@ def update_subnet(id):
 
 
 @api_bp.delete('/subnets/<int:id>', tags=[tag_subnets])
-def delete_subnet(id):
+def delete_subnet(**kwargs):
     """Delete a subnet and all associated IPs"""
+    id = request.view_args['id']
     try:
         subnet = Subnet.query.get_or_404(id)
         db.session.delete(subnet)
@@ -308,8 +312,9 @@ def get_ips():
 
 
 @api_bp.get('/ips/<int:id>', tags=[tag_ips])
-def get_ip(id):
+def get_ip(**kwargs):
     """Get a specific IP"""
+    id = request.view_args['id']
     ip = IP.query.get_or_404(id)
     return jsonify(ip.to_dict())
 
@@ -390,8 +395,9 @@ def create_ip():
 
 
 @api_bp.put('/ips/<int:id>', tags=[tag_ips])
-def update_ip(id):
+def update_ip(**kwargs):
     """Update an IP entry"""
+    id = request.view_args['id']
     try:
         ip = IP.query.get_or_404(id)
         data = request.json
@@ -453,8 +459,9 @@ def update_ip(id):
 
 
 @api_bp.delete('/ips/<int:id>', tags=[tag_ips])
-def delete_ip(id):
+def delete_ip(**kwargs):
     """Delete an IP entry"""
+    id = request.view_args['id']
     try:
         ip = IP.query.get_or_404(id)
         db.session.delete(ip)
