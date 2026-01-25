@@ -351,12 +351,29 @@ function showSettingsModal() {
         adminPanelSection.classList.add('hidden');
     }
     
+    switchSettingsTab('user');
     showModal('settingsModal');
 }
 
 function closeSettingsModal() {
     hideModal('settingsModal');
     document.getElementById('passwordForm').reset();
+}
+
+function switchSettingsTab(tab) {
+    const userTabBtn = document.getElementById('settingsTabUser');
+    const systemTabBtn = document.getElementById('settingsTabSystem');
+    const userPane = document.getElementById('settingsUserPane');
+    const systemPane = document.getElementById('settingsSystemPane');
+    
+    const activate = (btn, pane, active) => {
+        if (!btn || !pane) return;
+        btn.classList.toggle('tab-active', active);
+        btn.classList.toggle('text-gray-500', !active);
+        pane.classList.toggle('hidden', !active);
+    };
+    activate(userTabBtn, userPane, tab === 'user');
+    activate(systemTabBtn, systemPane, tab === 'system');
 }
 
 function closeLoginModal() {
@@ -1720,7 +1737,7 @@ async function checkForUpdates() {
             console.log('[Updates] Already up to date');
             setPill(versionBadge, 'Up to date', 'bg-emerald-100 text-emerald-700');
             if (headerBadge) headerBadge.classList.add('hidden');
-            showToast('You are running the latest version!', 'success');
+            // No toast on up-to-date to avoid noise
         }
     } catch (error) {
         console.error('[Updates] Error checking updates:', error);
