@@ -171,7 +171,17 @@ async function handleLogin(event) {
         const data = await res.json();
         
         if (!res.ok) {
-            showToast(data.error || 'Login failed', 'error');
+            let errorMsg = 'Login failed';
+            if (data.error) {
+                if (data.error.includes('not found')) {
+                    errorMsg = 'User not found. Please check your username.';
+                } else if (data.error.includes('password') || data.error.includes('Invalid')) {
+                    errorMsg = 'Incorrect password. Please try again.';
+                } else {
+                    errorMsg = data.error;
+                }
+            }
+            showToast(errorMsg, 'error');
             return;
         }
         
@@ -210,7 +220,19 @@ async function handleRegister(event) {
         const data = await res.json();
         
         if (!res.ok) {
-            showToast(data.error || 'Registration failed', 'error');
+            let errorMsg = 'Registration failed';
+            if (data.error) {
+                if (data.error.includes('exists') || data.error.includes('already')) {
+                    errorMsg = 'Username or email already in use. Please choose a different one.';
+                } else if (data.error.includes('email')) {
+                    errorMsg = 'Invalid email address. Please check and try again.';
+                } else if (data.error.includes('password')) {
+                    errorMsg = 'Password does not meet requirements (min 8 chars, uppercase, lowercase, number, special).';
+                } else {
+                    errorMsg = data.error;
+                }
+            }
+            showToast(errorMsg, 'error');
             return;
         }
         
@@ -582,7 +604,19 @@ async function syncConnector(id, { dryRun = false } = {}) {
         const res = await fetch(url, { method: 'POST' });
         const data = await res.json();
         if (!res.ok || data.success === false) {
-            showToast(data.error || 'Sync failed', 'error');
+            let errorMsg = dryRun ? 'Preview failed' : 'Sync failed';
+            if (data.error) {
+                if (data.error.includes('No clients')) {
+                    errorMsg = 'Sync failed: Server returned no clients. Check connector configuration and credentials.';
+                } else if (data.error.includes('connection') || data.error.includes('Connection')) {
+                    errorMsg = 'Sync failed: Cannot connect to the server. Check network and server status.';
+                } else if (data.error.includes('credentials') || data.error.includes('Unauthorized')) {
+                    errorMsg = 'Sync failed: Authentication error. Update connector credentials.';
+                } else {
+                    errorMsg = `Sync failed: ${data.error}`;
+                }
+            }
+            showToast(errorMsg, 'error');
             return null;
         }
         if (dryRun) return data;
@@ -706,10 +740,26 @@ async function testConnector(id) {
         const res = await fetch(`/api/connectors/${id}/test`, { method: 'POST' });
         const data = await res.json();
         if (!res.ok || !data.success) {
-            showToast(data.error || 'Test failed', 'error');
+            let errorMsg = 'Connection test failed';
+            if (data.error) {
+                if (data.error.includes('404') || data.error.includes('not found')) {
+                    errorMsg = 'Server not found. Check the base URL and ensure the server is running.';
+                } else if (data.error.includes('401') || data.error.includes('Unauthorized') || data.error.includes('credentials')) {
+                    errorMsg = 'Authentication failed. Check your API key, username, or password.';
+                } else if (data.error.includes('SSL') || data.error.includes('certificate')) {
+                    errorMsg = 'SSL certificate error. Try disabling SSL verification if using self-signed cert.';
+                } else if (data.error.includes('timeout') || data.error.includes('Timeout')) {
+                    errorMsg = 'Connection timeout. The server is not responding. Check network connectivity.';
+                } else if (data.error.includes('No clients')) {
+                    errorMsg = 'Authentication succeeded but no clients found. Verify the site ID is correct.';
+                } else {
+                    errorMsg = data.error;
+                }
+            }
+            showToast(errorMsg, 'error');
             return;
         }
-        showToast('Connector test successful', 'success');
+        showToast('✓ Connection successful! Credentials are valid.', 'success');
     } catch (e) {
         console.error('Test connector failed', e);
         showToast('Test failed', 'error');
