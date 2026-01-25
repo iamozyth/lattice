@@ -271,7 +271,14 @@ async function handleSetup(event) {
         const data = await res.json();
         
         if (!res.ok) {
-            showToast(data.error || 'Setup failed', 'error');
+            console.error('Setup error response:', data);
+            // Try to show validation details if available
+            if (data.detail) {
+                const details = Array.isArray(data.detail) ? data.detail.map(d => d.msg).join(', ') : data.detail;
+                showToast(`Setup failed: ${details}`, 'error');
+            } else {
+                showToast(data.error || 'Setup failed', 'error');
+            }
             return;
         }
         
@@ -647,9 +654,7 @@ function renderUpdatedItem(item) {
     const ip = escapeHtml(item.ip || '-');
     const subnet = escapeHtml((item.subnet && item.subnet.cidr) || 'Unknown subnet');
     const changes = item.changes || {};
-    const changeList = Object.keys(changes).length
-        ? Object.entries(changes).map(([k, v]) => `${escapeHtml(k)}: ${escapeHtml(String(v))}`).join(', ')
-        : 'No changes';
+    const changeList = Object.keys(changes).length ? Object.entries(changes).map(([k, v]) => `${escapeHtml(k)}: ${escapeHtml(String(v))}`).join(', ') : 'No changes';
     return `
         <div class="border border-gray-200 rounded-lg p-2 bg-blue-50">
             <div class="text-sm font-semibold text-gray-800">${ip}</div>
