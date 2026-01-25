@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="gradientBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="256" height="256" rx="48" fill="url(#gradientBg)"/>
+  <!-- Network icon (simplified) -->
+  <g transform="translate(128, 128)">
+    <!-- Center circle -->
+    <circle cx="0" cy="0" r="12" fill="white"/>
+    <!-- Top connection -->
+    <line x1="0" y1="-12" x2="0" y2="-40" stroke="white" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="0" cy="-52" r="8" fill="white"/>
+    <!-- Bottom-left connection -->
+    <line x1="0" y1="-12" x2="-35" y2="35" stroke="white" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="-48" cy="48" r="8" fill="white"/>
+    <!-- Bottom-right connection -->
+    <line x1="0" y1="-12" x2="35" y2="35" stroke="white" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="48" cy="48" r="8" fill="white"/>
+  </g>
+</svg>
