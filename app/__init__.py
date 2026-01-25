@@ -10,6 +10,9 @@ from flask_openapi3 import OpenAPI
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Version constant
+VERSION = '1.0.0-beta.1'
+
 db = SQLAlchemy()
 login_manager = LoginManager()
 

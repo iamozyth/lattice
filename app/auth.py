@@ -650,3 +650,46 @@ def toggle_active_status(user_id: int):
         db.session.rollback()
         return {'error': f'Error updating user: {str(e)}'}, 500
 
+
+# ============================================================================
+# Version and Update Checking
+# ============================================================================
+
+@auth_bp.get('/version', tags=[tag_auth])
+def get_version():
+    """Get current application version"""
+    from app import VERSION
+    return {
+        'version': VERSION,
+        'name': 'NetDoc IPAM',
+        'repository': 'https://github.com/iamozyth/netdoc-ipam'
+    }, 200
+
+
+@auth_bp.get('/check-updates', tags=[tag_auth])
+def check_updates():
+    """Check if updates are available on GitHub"""
+    try:
+        from app import VERSION
+        from app.updates import check_for_updates
+        
+        update_info = check_for_updates(VERSION)
+        return update_info, 200
+    except ImportError:
+        # requests library not available
+        return {
+            'update_available': False,
+            'current_version': '1.0.0-beta.1',
+            'latest_version': None,
+            'release_url': None,
+            'release_notes': None,
+            'published_at': None,
+            'is_prerelease': False,
+            'error': 'Update checking not available (requests library not installed)'
+        }, 200
+    except Exception as e:
+        return {
+            'update_available': False,
+            'current_version': '1.0.0-beta.1',
+            'error': f'Error checking for updates: {str(e)}'
+        }, 200

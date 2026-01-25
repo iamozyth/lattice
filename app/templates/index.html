@@ -118,13 +118,6 @@
                         <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                     </div>
                     
-                    <button onclick="showExportModal()" class="p-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors" title="Export Data">
-                        <i class="fas fa-download"></i>
-                    </button>
-                    <button onclick="showImportModal()" class="p-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors" title="Import Data">
-                        <i class="fas fa-upload"></i>
-                    </button>
-                    
                     <a href="/openapi/swagger" target="_blank" class="p-2.5 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors" title="API Documentation">
                         <i class="fas fa-book"></i>
                     </a>
@@ -909,18 +902,21 @@
 
     <!-- Settings Modal -->
     <div id="settingsModal" class="hidden modal-overlay fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
-            <div class="bg-gradient-to-r from-slate-600 to-slate-700 text-white p-5 flex justify-between items-center">
-                <h2 class="text-xl font-semibold">Settings</h2>
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden max-h-[90vh] flex flex-col">
+            <div class="bg-gradient-to-r from-slate-600 to-slate-700 text-white p-5 flex justify-between items-center sticky top-0">
+                <h2 class="text-xl font-semibold">Advanced Settings</h2>
                 <button onclick="closeSettingsModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
                     <i class="fas fa-times text-lg"></i>
                 </button>
             </div>
-            <div class="p-6 space-y-6">
-                <!-- User Info -->
+            <div class="overflow-y-auto flex-1 p-6 space-y-6">
+                <!-- User Account Section -->
                 <div class="pb-6 border-b border-gray-200">
-                    <h3 class="text-sm font-semibold text-gray-700 mb-3">Account Information</h3>
-                    <div class="space-y-2 text-sm">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="fas fa-user text-primary-600"></i>
+                        <h3 class="text-sm font-semibold text-gray-700">Account Information</h3>
+                    </div>
+                    <div class="space-y-2 text-sm bg-gray-50 rounded-lg p-4">
                         <div class="flex justify-between">
                             <span class="text-gray-600">Username:</span>
                             <span class="font-medium text-gray-800" id="settingsUsername">-</span>
@@ -936,9 +932,12 @@
                     </div>
                 </div>
 
-                <!-- Change Password -->
+                <!-- Security Section -->
                 <div class="pb-6 border-b border-gray-200">
-                    <h3 class="text-sm font-semibold text-gray-700 mb-3">Change Password</h3>
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="fas fa-lock text-primary-600"></i>
+                        <h3 class="text-sm font-semibold text-gray-700">Security</h3>
+                    </div>
                     <form id="passwordForm" class="space-y-3" onsubmit="handleChangePassword(event)">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
@@ -958,17 +957,70 @@
                     </form>
                 </div>
 
-                <!-- Admin Panel Link -->
+                <!-- Data Management Section -->
+                <div class="pb-6 border-b border-gray-200">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="fas fa-database text-primary-600"></i>
+                        <h3 class="text-sm font-semibold text-gray-700">Data Management</h3>
+                    </div>
+                    <div class="space-y-3">
+                        <button onclick="showExportModal()" class="w-full btn-secondary text-left flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-colors">
+                            <i class="fas fa-download w-5 text-primary-600"></i>
+                            <div class="text-left">
+                                <div class="font-medium text-gray-800">Export Data</div>
+                                <div class="text-xs text-gray-500">Download all subnets and IPs as JSON</div>
+                            </div>
+                        </button>
+                        <button onclick="showImportModal()" class="w-full btn-secondary text-left flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-colors">
+                            <i class="fas fa-upload w-5 text-primary-600"></i>
+                            <div class="text-left">
+                                <div class="font-medium text-gray-800">Import Data</div>
+                                <div class="text-xs text-gray-500">Restore or merge data from JSON file</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Application & Updates Section -->
+                <div class="pb-6 border-b border-gray-200">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="fas fa-info-circle text-primary-600"></i>
+                        <h3 class="text-sm font-semibold text-gray-700">Application & Updates</h3>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4 space-y-4">
+                        <div class="flex justify-between items-center py-2">
+                            <span class="text-gray-600">Version:</span>
+                            <span class="font-medium text-gray-800 font-mono" id="appVersion">-</span>
+                        </div>
+                        <div class="border-t border-gray-200 pt-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="text-gray-600">Update Status:</span>
+                                <span class="text-xs px-3 py-1 bg-gray-200 text-gray-700 rounded-full font-medium" id="updateStatus">Checking...</span>
+                            </div>
+                            <button onclick="checkForUpdates()" class="w-full btn-primary text-sm">
+                                <i class="fas fa-sync mr-2"></i>Check for Updates
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Panel Section -->
                 <div id="adminPanelSection" class="pb-6 border-b border-gray-200 hidden">
-                    <h3 class="text-sm font-semibold text-gray-700 mb-3">Administration</h3>
-                    <button onclick="showAdminUsersModal()" class="w-full btn-secondary text-left flex items-center gap-2">
-                        <i class="fas fa-users-cog w-5"></i>
-                        <span>Manage Users</span>
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="fas fa-shield-alt text-red-600"></i>
+                        <h3 class="text-sm font-semibold text-gray-700">Administration</h3>
+                    </div>
+                    <button onclick="showAdminUsersModal()" class="w-full btn-secondary text-left flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-red-300 hover:bg-red-50 transition-colors">
+                        <i class="fas fa-users-cog w-5 text-red-600"></i>
+                        <div class="text-left">
+                            <div class="font-medium text-gray-800">Manage Users</div>
+                            <div class="text-xs text-gray-500">Create, modify, and delete user accounts</div>
+                        </div>
                     </button>
                 </div>
 
-                <!-- Logout -->
-                <div class="flex gap-3 justify-end">
+                <!-- Footer Actions -->
+                <div class="flex gap-3 justify-end pt-6 border-t border-gray-200">
                     <button onclick="closeSettingsModal()" class="btn-secondary">Close</button>
                     <button onclick="handleLogout()" class="btn-danger">
                         <i class="fas fa-sign-out-alt mr-2"></i>Logout

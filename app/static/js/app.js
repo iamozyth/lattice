@@ -573,6 +573,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isAuthenticated) {
             loadSubnets();
             loadStats();
+            loadVersion();
+            checkForUpdates();
         }
     });
     
@@ -1653,4 +1655,54 @@ function escapeHtml(text) {
         "'": '&#039;'
     };
     return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+// ============================================================================
+// Version and Update Checking
+// ============================================================================
+
+async function loadVersion() {
+    try {
+        const res = await fetch('/api/auth/version');
+        const data = await res.json();
+        document.getElementById('appVersion').textContent = data.version || '-';
+    } catch (error) {
+        console.error('Error loading version:', error);
+        document.getElementById('appVersion').textContent = 'unknown';
+    }
+}
+
+async function checkForUpdates() {
+    const btn = document.getElementById('updateCheckBtn');
+    if (btn) btn.disabled = true;
+    
+    try {
+        const res = await fetch('/api/auth/check-updates');
+        const data = await res.json();
+        
+        if (document.getElementById('updateStatus')) {
+            if (data.error) {
+                document.getElementById('updateStatus').textContent = 'Check failed';
+            } else if (data.update_available) {
+                document.getElementById('updateStatus').textContent = `Update available: ${data.latest_version}`;
+                const badge = document.getElementById('updateBadge');
+                if (badge) badge.classList.remove('hidden');
+                showToast(`Version ${data.latest_version} available! ${data.release_url ? 'Click to update.' : ''}`, 'info');
+                if (data.release_url) {
+                    const updateLink = document.querySelector('.update-link');
+                    if (updateLink) updateLink.href = data.release_url;
+                }
+            } else {
+                document.getElementById('updateStatus').textContent = 'Up to date';
+                const badge = document.getElementById('updateBadge');
+                if (badge) badge.classList.add('hidden');
+            }
+        }
+    } catch (error) {
+        console.error('Error checking updates:', error);
+        if (document.getElementById('updateStatus')) {
+            document.getElementById('updateStatus').textContent = 'Check failed';
+        }
+    } finally {
+        if (btn) btn.disabled = false;
+    }
 }
