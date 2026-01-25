@@ -4,6 +4,39 @@ import ipaddress
 import re
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
+from sqlalchemy import LargeBinary
+
+class Connector(db.Model):
+    __tablename__ = 'connectors'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    type = db.Column(db.String(50), nullable=False)  # e.g., 'unifi'
+    config_encrypted = db.Column(LargeBinary, nullable=False)
+    enabled = db.Column(db.Boolean, default=True)
+    last_sync_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.Index('idx_connector_type', 'type'),
+        db.Index('idx_connector_enabled', 'enabled'),
+    )
+
+    def to_dict(self, include_details: bool = False, details: dict | None = None):
+        """Serialize without exposing secrets. Optionally include safe details."""
+        data = {
+            'id': self.id,
+            'name': self.name,
+            'type': self.type,
+            'enabled': self.enabled,
+            'last_sync_at': self.last_sync_at.isoformat() if self.last_sync_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+        if include_details and details:
+            data['details'] = details
+        return data
 
 
 class Subnet(db.Model):

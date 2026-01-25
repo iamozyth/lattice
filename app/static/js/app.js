@@ -389,6 +389,192 @@ function switchSettingsTab(tab) {
     }
 }
 
+// ============================================================================
+// Connectors
+// ============================================================================
+
+async function loadConnectorStatus() {
+    try {
+        const res = await fetch('/api/connectors');
+        const data = await res.json();
+        const unifi = (data || []).find(c => c.name === 'unifi');
+        const badge = document.getElementById('unifiStatusBadge');
+        if (unifi && badge) {
+            badge.textContent = unifi.configured ? 'Configured' : 'Not Configured';
+            badge.className = 'text-xs px-2.5 py-1 rounded-full font-semibold ' + (unifi.configured ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-700');
+        }
+    } catch (e) {
+        console.error('Connector status failed', e);
+    }
+}
+
+async function syncUnifiConnector() {
+    try {
+        const btns = document.querySelectorAll('button');
+        btns.forEach(b => b.disabled = true);
+        const res = await fetch('/api/connectors/unifi/sync', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+            showToast(data.error || 'UniFi sync failed', 'error');
+            return;
+        }
+        showToast(`UniFi sync: added ${data.added}, updated ${data.updated}, skipped ${data.skipped}`, 'success');
+        const last = document.getElementById('unifiLastSync');
+        if (last) last.textContent = `Last sync: ${new Date().toLocaleString()}`;
+        // Refresh stats after enrichment
+        loadStats();
+    } catch (e) {
+        console.error('UniFi sync error', e);
+        showToast('UniFi sync failed', 'error');
+    } finally {
+        const btns = document.querySelectorAll('button');
+        btns.forEach(b => b.disabled = false);
+    }
+}
+
+function showAddConnectorForm() {
+    const el = document.getElementById('addConnectorForm');
+    if (el) el.classList.remove('hidden');
+}
+
+function hideAddConnectorForm() {
+    const el = document.getElementById('addConnectorForm');
+    if (el) el.classList.add('hidden');
+    const form = document.getElementById('connectorForm');
+    if (form) form.reset();
+}
+
+async function saveConnector(event) {
+    event.preventDefault();
+    const name = document.getElementById('connectorName').value.trim();
+    const type = document.getElementById('connectorType').value;
+    const enabled = document.getElementById('connectorEnabled').checked;
+    const config = {};
+    if (type === 'unifi') {
+        config.base_url = document.getElementById('unifiBaseUrl').value.trim();
+        config.site_id = document.getElementById('unifiSiteId').value.trim() || 'default';
+        config.api_key = document.getElementById('unifiApiKey').value.trim();
+        config.verify_ssl = document.getElementById('unifiVerifySSL').value === 'true';
+        config.username = document.getElementById('unifiUsername').value.trim();
+        config.password = document.getElementById('unifiPassword').value.trim();
+    }
+    try {
+        const res = await fetch('/api/connectors', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, type, enabled, config })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            showToast(data.error || 'Failed to create connector', 'error');
+            return;
+        }
+        showToast('Connector created', 'success');
+        hideAddConnectorForm();
+        loadConnectors();
+    } catch (e) {
+        console.error('Create connector failed', e);
+        showToast('Failed to create connector', 'error');
+    }
+}
+
+async function loadConnectors() {
+    try {
+        const res = await fetch('/api/connectors');
+        const items = await res.json();
+        renderConnectorsList(items || []);
+    } catch (e) {
+        console.error('Load connectors failed', e);
+    }
+}
+
+function renderConnectorsList(items) {
+    const container = document.getElementById('connectorsList');
+    if (!container) return;
+    if (!items.length) {
+        container.innerHTML = `
+            <div class="col-span-full text-center py-12 text-gray-500">
+                <i class="fas fa-plug text-3xl mb-3"></i>
+                <p>No connectors configured</p>
+            </div>
+        `;
+        return;
+    }
+    container.innerHTML = items.map(c => {
+        const lastSync = c.last_sync_at ? new Date(c.last_sync_at).toLocaleString() : '-';
+        const statusCls = c.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-700';
+        const details = c.details || {};
+        return `
+            <div class="border border-gray-200 rounded-lg p-4 flex flex-col gap-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-plug text-primary-600"></i>
+                        <div>
+                            <div class="font-medium text-gray-800">${escapeHtml(c.name)} <span class="text-xs text-gray-500">(${escapeHtml(c.type)})</span></div>
+                            <div class="text-xs text-gray-500">${escapeHtml(details.base_url || '')} ${details.site_id ? '('+escapeHtml(details.site_id)+')' : ''}</div>
+                        </div>
+                    </div>
+                    <span class="text-xs px-2.5 py-1 rounded-full font-semibold ${statusCls}">${c.enabled ? 'Enabled' : 'Disabled'}</span>
+                </div>
+                <div class="text-xs text-gray-500">Last sync: ${lastSync}</div>
+                <div class="flex gap-2">
+                    <button class="btn-secondary" onclick="testConnector(${c.id})"><i class="fas fa-vial mr-2"></i>Test</button>
+                    <button class="btn-secondary" onclick="syncConnector(${c.id})"><i class="fas fa-sync mr-2"></i>Sync</button>
+                    <button class="btn-danger" onclick="deleteConnector(${c.id})"><i class="fas fa-trash mr-2"></i>Delete</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function syncConnector(id) {
+    try {
+        const res = await fetch(`/api/connectors/${id}/sync`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+            showToast(data.error || 'Sync failed', 'error');
+            return;
+        }
+        showToast(`Sync complete: added ${data.added}, updated ${data.updated}, skipped ${data.skipped}`, 'success');
+        loadConnectors();
+        loadStats();
+    } catch (e) {
+        console.error('Sync connector failed', e);
+        showToast('Sync failed', 'error');
+    }
+}
+
+async function testConnector(id) {
+    try {
+        const res = await fetch(`/api/connectors/${id}/test`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+            showToast(data.error || 'Test failed', 'error');
+            return;
+        }
+        showToast('Connector test successful', 'success');
+    } catch (e) {
+        console.error('Test connector failed', e);
+        showToast('Test failed', 'error');
+    }
+}
+
+async function deleteConnector(id) {
+    if (!confirm('Delete this connector?')) return;
+    try {
+        const res = await fetch(`/api/connectors/${id}`, { method: 'DELETE' });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            showToast(data.error || 'Delete failed', 'error');
+            return;
+        }
+        showToast('Connector deleted', 'success');
+        loadConnectors();
+    } catch (e) {
+        console.error('Delete connector failed', e);
+        showToast('Delete failed', 'error');
+    }
+}
 function closeLoginModal() {
     if (currentUser) {
         hideModal('loginModal');
@@ -841,13 +1027,25 @@ function switchTab(tab) {
     document.getElementById('tabSubnets').classList.toggle('text-gray-500', tab !== 'subnets');
     document.getElementById('tabIPs').classList.toggle('tab-active', tab === 'ips');
     document.getElementById('tabIPs').classList.toggle('text-gray-500', tab !== 'ips');
+    const tabConn = document.getElementById('tabConnectors');
+    if (tabConn) {
+        tabConn.classList.toggle('tab-active', tab === 'connectors');
+        tabConn.classList.toggle('text-gray-500', tab !== 'connectors');
+    }
     
     // Show/hide views
     document.getElementById('subnetsView').classList.toggle('hidden', tab !== 'subnets');
     document.getElementById('ipsView').classList.toggle('hidden', tab !== 'ips');
+    const connectorsView = document.getElementById('connectorsView');
+    if (connectorsView) {
+        connectorsView.classList.toggle('hidden', tab !== 'connectors');
+    }
     
     if (tab === 'ips') {
         loadAllIPs();
+    }
+    if (tab === 'connectors') {
+        loadConnectors();
     }
 }
 

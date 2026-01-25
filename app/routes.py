@@ -2,8 +2,10 @@ from flask import Blueprint, jsonify, request, render_template, send_from_direct
 from flask_login import login_required, current_user
 from flask_openapi3 import APIBlueprint, Tag
 from app import db
-from app.models import Subnet, IP, ip_sort_key
+from app.models import Subnet, IP, ip_sort_key, Connector
 from app.scanner import NetworkScanner, scan_jobs
+from app.connectors.unifi import UniFiConnector
+from app.security import encrypt_config, decrypt_config
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 import json
@@ -14,6 +16,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 scanner = NetworkScanner()
+unifi_connector = UniFiConnector()
 
 api_bp = APIBlueprint('api', __name__, url_prefix='/api')
 main_bp = Blueprint('main', __name__)
@@ -28,6 +31,7 @@ tag_import_export = Tag(name='Import/Export', description='Data import and expor
 tag_lookup = Tag(name='IP Lookup', description='IP address lookup utilities')
 tag_metadata = Tag(name='Metadata', description='Metadata and enumerations')
 tag_scanner = Tag(name='Network Scanner', description='Network scanning operations')
+tag_connectors = Tag(name='Connectors', description='External system connectors')
 
 
 # ============================================================================
@@ -392,6 +396,212 @@ def create_ip():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
+
+
+# ============================================================================
+# Connectors Routes
+# ============================================================================
+
+def _safe_details(conn_type: str, config: dict) -> dict:
+    """Return non-sensitive details for client display."""
+    if conn_type == 'unifi':
+        return {
+            'base_url': config.get('base_url'),
+            'site_id': config.get('site_id'),
+            'auth': 'api_key' if bool(config.get('api_key')) else ('username' if bool(config.get('username')) else 'unknown')
+        }
+    return {}
+
+
+@api_bp.get('/connectors', tags=[tag_connectors])
+@login_required
+def list_connectors():
+    """List configured connectors from DB."""
+    items = Connector.query.order_by(Connector.created_at.desc()).all()
+    result = []
+    for c in items:
+        try:
+            cfg = decrypt_config(c.config_encrypted)
+        except Exception:
+            cfg = {}
+        result.append(c.to_dict(include_details=True, details=_safe_details(c.type, cfg)))
+    return jsonify(result)
+
+
+@api_bp.post('/connectors', tags=[tag_connectors])
+@login_required
+def create_connector():
+    """Create a new connector with encrypted config."""
+    data = request.get_json() or {}
+    name = data.get('name')
+    conn_type = data.get('type')
+    config = data.get('config') or {}
+    enabled = bool(data.get('enabled', True))
+
+    if not name or not conn_type:
+        return jsonify({'error': 'name and type are required'}), 400
+
+    if conn_type == 'unifi':
+        # Validate required fields
+        base_url = (config.get('base_url') or '').strip()
+        site_id = (config.get('site_id') or 'default').strip()
+        api_key = (config.get('api_key') or '').strip()
+        username = (config.get('username') or '').strip()
+        password = (config.get('password') or '').strip()
+        verify_ssl = bool(config.get('verify_ssl', True))
+        if not base_url:
+            return jsonify({'error': 'base_url is required'}), 400
+        if not site_id:
+            return jsonify({'error': 'site_id is required'}), 400
+        if not api_key and not (username and password):
+            return jsonify({'error': 'Provide api_key or username+password'}), 400
+        config = {
+            'base_url': base_url,
+            'site_id': site_id,
+            'api_key': api_key or None,
+            'username': username or None,
+            'password': password or None,
+            'verify_ssl': verify_ssl,
+        }
+    else:
+        return jsonify({'error': f'Unsupported connector type: {conn_type}'}), 400
+
+    try:
+        enc = encrypt_config(config)
+        c = Connector(name=name, type=conn_type, config_encrypted=enc, enabled=enabled)
+        db.session.add(c)
+        db.session.commit()
+        return jsonify(c.to_dict(include_details=True, details=_safe_details(conn_type, config))), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+
+@api_bp.delete('/connectors/<int:id>', tags=[tag_connectors])
+@login_required
+def delete_connector(**kwargs):
+    cid = request.view_args['id']
+    c = Connector.query.get_or_404(cid)
+    try:
+        db.session.delete(c)
+        db.session.commit()
+        return '', 204
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+
+@api_bp.post('/connectors/<int:id>/test', tags=[tag_connectors])
+@login_required
+def test_connector(**kwargs):
+    cid = request.view_args['id']
+    c = Connector.query.get_or_404(cid)
+    try:
+        cfg = decrypt_config(c.config_encrypted)
+        if c.type == 'unifi':
+            connector = UniFiConnector(cfg)
+            connector.connect()
+            clients = connector.fetch()
+            if not clients:
+                return jsonify({'success': False, 'error': 'No clients returned; verify credentials or site ID'}), 400
+            return jsonify({'success': True, 'connector': c.type, 'clients_sample': min(len(clients), 5)}), 200
+        else:
+            return jsonify({'error': f'Unsupported connector type: {c.type}'}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@api_bp.post('/connectors/<int:id>/sync', tags=[tag_connectors])
+@login_required
+def sync_connector(**kwargs):
+    """Run sync for a specific connector by id."""
+    cid = request.view_args['id']
+    c = Connector.query.get_or_404(cid)
+    try:
+        cfg = decrypt_config(c.config_encrypted)
+        if c.type == 'unifi':
+            connector = UniFiConnector(cfg)
+            clients = connector.fetch()
+            if not clients:
+                raise RuntimeError('No clients returned; verify credentials or site ID')
+        else:
+            return jsonify({'error': f'Unsupported connector type: {c.type}'}), 400
+        added = 0
+        updated = 0
+        skipped = 0
+
+        # Preload subnets for matching
+        subnets = Subnet.query.all()
+
+        def find_subnet_for_ip(ip_str):
+            for s in subnets:
+                if s.contains_ip(ip_str):
+                    return s
+            return None
+
+        for c in clients:
+            ip_addr = c.get('ip')
+            mac = c.get('mac')
+            hostname = c.get('hostname')
+            device_type = c.get('device_type')
+            manufacturer = c.get('manufacturer')
+            notes = c.get('notes')
+
+            if not ip_addr:
+                skipped += 1
+                continue
+
+            subnet = find_subnet_for_ip(ip_addr)
+            if not subnet:
+                # No matching subnet; skip to avoid violating IP FK
+                skipped += 1
+                continue
+
+            existing = IP.query.filter_by(address=ip_addr, subnet_id=subnet.id).first()
+            if existing:
+                # Update known fields if empty
+                if mac and not existing.mac_address:
+                    existing.mac_address = mac
+                if hostname and not existing.hostname:
+                    existing.hostname = hostname
+                if manufacturer and not existing.manufacturer:
+                    existing.manufacturer = manufacturer
+                if device_type and not existing.device_type:
+                    existing.device_type = device_type
+                if notes and not existing.notes:
+                    existing.notes = notes
+                existing.status = 'in-use'
+                updated += 1
+            else:
+                ip = IP(
+                    address=ip_addr,
+                    hostname=hostname,
+                    subnet_id=subnet.id,
+                    status='in-use',
+                    mac_address=mac,
+                    device_type=device_type,
+                    manufacturer=manufacturer,
+                    notes=notes
+                )
+                db.session.add(ip)
+                added += 1
+
+        c.last_sync_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'connector': c.type,
+            'connector_id': c.id,
+            'clients': len(clients),
+            'added': added,
+            'updated': updated,
+            'skipped': skipped,
+            'last_sync_at': c.last_sync_at.isoformat() if c.last_sync_at else None,
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Connector sync failed: {str(e)}'}), 500
 
 
 @api_bp.put('/ips/<int:id>', tags=[tag_ips])
