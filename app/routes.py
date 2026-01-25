@@ -742,15 +742,9 @@ def scanner_status():
 
 
 @api_bp.post('/scanner/scan-subnet/<int:subnet_id>', tags=[tag_scanner])
-def scan_subnet(subnet_id):
-    """
-    Scan a subnet for live hosts
-    
-    POST data:
-    {
-        'scan_type': 'ping' or 'full' (default: 'ping')
-    }
-    """
+def scan_subnet(**kwargs):
+    """Scan a subnet for live hosts"""
+    subnet_id = request.view_args['subnet_id']
     if not scanner.is_available():
         return jsonify({'error': 'Nmap scanner not available'}), 503
     
@@ -791,8 +785,9 @@ def scan_subnet(subnet_id):
 
 
 @api_bp.post('/scanner/scan-subnet/<int:subnet_id>/start', tags=[tag_scanner])
-def scan_subnet_start(subnet_id):
+def scan_subnet_start(**kwargs):
     """Start an asynchronous subnet scan and return a job id"""
+    subnet_id = request.view_args['subnet_id']
     if not scanner.is_available():
         return jsonify({'error': 'Nmap scanner not available'}), 503
 
@@ -926,12 +921,9 @@ def bulk_import_ips():
 
 
 @api_bp.post('/scanner/verify/<int:subnet_id>', tags=[tag_scanner])
-def verify_subnet(subnet_id):
-    """
-    Verify status of all IPs in a subnet
-    
-    Returns verification results for each IP
-    """
+def verify_subnet(**kwargs):
+    """Verify status of all IPs in a subnet"""
+    subnet_id = request.view_args['subnet_id']
     if not scanner.is_available():
         return jsonify({'error': 'Nmap scanner not available'}), 503
     
