@@ -813,8 +813,9 @@ def scan_subnet_start(**kwargs):
 
 
 @api_bp.get('/scanner/scan-jobs/<string:job_id>', tags=[tag_scanner])
-def scan_job_status(job_id):
+def scan_job_status(**kwargs):
     """Get the current status, logs, and partial results for a scan job"""
+    job_id = request.view_args['job_id']
     job = scan_jobs.get_job(job_id)
     if not job:
         return jsonify({'error': 'Job not found'}), 404
