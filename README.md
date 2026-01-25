@@ -111,56 +111,37 @@ All sensitive values are loaded from `.env` (see `.env.example`).
 | `FLASK_ENV` | `production` | Flask environment mode |
 | `FLASK_RUN_HOST` | `0.0.0.0` | Bind address inside the container |
 
-## 🔌 API Reference
+## 🔌 API Documentation
 
-### Statistics
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/stats` | GET | Dashboard statistics |
+**Complete API documentation is available via Swagger UI:**
 
-### Subnets
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/subnets` | GET | List all subnets (with filtering) |
-| `/api/subnets/<id>` | GET | Get subnet with all IPs |
-| `/api/subnets` | POST | Create new subnet |
-| `/api/subnets/<id>` | PUT | Update subnet |
-| `/api/subnets/<id>` | DELETE | Delete subnet |
-| `/api/subnets/<id>/available-ips` | GET | Get available IPs |
+```
+http://localhost:5001/openapi/swagger
+```
 
-### IPs
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/ips` | GET | List all IPs (with filtering) |
-| `/api/ips/<id>` | GET | Get specific IP |
-| `/api/ips` | POST | Create new IP |
-| `/api/ips/<id>` | PUT | Update IP |
-| `/api/ips/<id>` | DELETE | Delete IP |
-| `/api/ips/bulk` | POST | Bulk create IPs |
+The interactive Swagger UI allows you to:
+- ✅ View all 40 API endpoints
+- ✅ See request/response schemas
+- ✅ Test endpoints directly from the browser
+- ✅ View authentication requirements
+- ✅ Download OpenAPI specification (JSON)
 
-### Utilities
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/lookup/ip/<address>` | GET | Find subnet for IP |
-| `/api/export` | GET | Export all data as JSON |
-| `/api/import` | POST | Import data from JSON |
-| `/api/environments` | GET | List all environments |
-| `/api/device-types` | GET | List all device types |
+Alternative API documentation viewer available at `/openapi/scalar`
 
-### Query Parameters
+### Quick API Overview
 
-**Subnets (`/api/subnets`):**
-- `search` - Search in name, CIDR, description, location, tags
-- `environment` - Filter by environment (prod, staging, dev, test)
-- `vlan` - Filter by VLAN ID
-- `sort` - Sort by: cidr, name, vlan, created
-- `order` - Sort order: asc, desc
+**All endpoints require authentication (login first)** except:
+- `POST /api/auth/setup` - Initial system setup
+- `POST /api/auth/register` - User registration
 
-**IPs (`/api/ips`):**
-- `subnet_id` - Filter by subnet
-- `search` - Search in address, hostname, description, MAC, owner
-- `status` - Filter by status
-- `device_type` - Filter by device type
+**Main endpoint categories:**
+- Statistics - Dashboard metrics
+- Subnets - Subnet management
+- IPs - IP address management  
+- Scanner - Network discovery
+- Import/Export - Data migration
+- Lookup - IP utilities
+- Authentication - User management
 
 ## 📁 Project Structure
 

@@ -32,3 +32,6 @@ wheels/
 .pytest_cache/
 htmlcov/
 db_data/
+
+# Internal documentation (not for public GitHub)
+IMPLEMENTATION_NOTES.md
