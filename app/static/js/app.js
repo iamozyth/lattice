@@ -1676,29 +1676,48 @@ async function checkForUpdates() {
     if (btn) btn.disabled = true;
     
     try {
+        console.log('[Updates] Checking for updates...');
         const res = await fetch('/api/auth/check-updates');
+        console.log('[Updates] Response status:', res.status);
+        
+        if (!res.ok) {
+            console.error('[Updates] HTTP error:', res.status, res.statusText);
+            showToast(`Update check failed: ${res.status}`, 'error');
+            if (document.getElementById('updateStatus')) {
+                document.getElementById('updateStatus').textContent = 'Check failed';
+            }
+            return;
+        }
+        
         const data = await res.json();
+        console.log('[Updates] Response data:', data);
         
         if (document.getElementById('updateStatus')) {
             if (data.error) {
+                console.warn('[Updates] API error:', data.error);
                 document.getElementById('updateStatus').textContent = 'Check failed';
+                showToast(`Update check failed: ${data.error}`, 'warning');
             } else if (data.update_available) {
+                console.log('[Updates] Update available:', data.latest_version);
                 document.getElementById('updateStatus').textContent = `Update available: ${data.latest_version}`;
                 const badge = document.getElementById('updateBadge');
                 if (badge) badge.classList.remove('hidden');
-                showToast(`Version ${data.latest_version} available! ${data.release_url ? 'Click to update.' : ''}`, 'info');
+                showToast(`Version ${data.latest_version} available!`, 'info');
                 if (data.release_url) {
                     const updateLink = document.querySelector('.update-link');
                     if (updateLink) updateLink.href = data.release_url;
                 }
             } else {
+                console.log('[Updates] Already up to date');
                 document.getElementById('updateStatus').textContent = 'Up to date';
                 const badge = document.getElementById('updateBadge');
                 if (badge) badge.classList.add('hidden');
+                showToast('You are running the latest version!', 'success');
             }
         }
     } catch (error) {
-        console.error('Error checking updates:', error);
+        console.error('[Updates] Error checking updates:', error);
+        showToast(`Update check error: ${error.message}`, 'error');
         if (document.getElementById('updateStatus')) {
             document.getElementById('updateStatus').textContent = 'Check failed';
         }
