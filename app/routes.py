@@ -408,7 +408,8 @@ def _safe_details(conn_type: str, config: dict) -> dict:
         return {
             'base_url': config.get('base_url'),
             'site_id': config.get('site_id'),
-            'auth': 'api_key' if bool(config.get('api_key')) else ('username' if bool(config.get('username')) else 'unknown')
+            'auth': 'api_key' if bool(config.get('api_key')) else ('username' if bool(config.get('username')) else 'unknown'),
+            'verify_ssl': bool(config.get('verify_ssl', True)),
         }
     return {}
 
@@ -472,6 +473,52 @@ def create_connector():
         db.session.add(c)
         db.session.commit()
         return jsonify(c.to_dict(include_details=True, details=_safe_details(conn_type, config))), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+
+@api_bp.put('/connectors/<int:id>', tags=[tag_connectors])
+@login_required
+def update_connector(**kwargs):
+    cid = request.view_args['id']
+    c = Connector.query.get_or_404(cid)
+    data = request.get_json() or {}
+    name = data.get('name', c.name)
+    conn_type = c.type  # immutable
+    config = data.get('config') or {}
+    enabled = bool(data.get('enabled', c.enabled))
+
+    if conn_type == 'unifi':
+        base_url = (config.get('base_url') or '').strip()
+        site_id = (config.get('site_id') or 'default').strip()
+        api_key = (config.get('api_key') or '').strip()
+        username = (config.get('username') or '').strip()
+        password = (config.get('password') or '').strip()
+        verify_ssl = bool(config.get('verify_ssl', True))
+        if not base_url:
+            return jsonify({'error': 'base_url is required'}), 400
+        if not site_id:
+            return jsonify({'error': 'site_id is required'}), 400
+        if not api_key and not (username and password):
+            return jsonify({'error': 'Provide api_key or username+password'}), 400
+        new_cfg = {
+            'base_url': base_url,
+            'site_id': site_id,
+            'api_key': api_key or None,
+            'username': username or None,
+            'password': password or None,
+            'verify_ssl': verify_ssl,
+        }
+    else:
+        return jsonify({'error': f'Unsupported connector type: {conn_type}'}), 400
+
+    try:
+        c.name = name
+        c.enabled = enabled
+        c.config_encrypted = encrypt_config(new_cfg)
+        db.session.commit()
+        return jsonify(c.to_dict(include_details=True, details=_safe_details(conn_type, new_cfg)))
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 400

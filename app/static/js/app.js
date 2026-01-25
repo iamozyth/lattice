@@ -9,6 +9,7 @@ let allSubnets = [];
 let allIPs = [];
 let currentSubnetData = null;
 let currentTab = 'subnets';
+let connectorEditId = null;
 let restoreDetailAfterIPModal = false;
 let scanInProgress = false;
 let currentScanJobId = null;
@@ -435,6 +436,10 @@ async function syncUnifiConnector() {
 function showAddConnectorForm() {
     const el = document.getElementById('addConnectorForm');
     if (el) el.classList.remove('hidden');
+    connectorEditId = null;
+    document.getElementById('connectorForm')?.reset();
+    const submitBtn = document.getElementById('connectorSubmitBtn');
+    if (submitBtn) submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Save Connector';
 }
 
 function hideAddConnectorForm() {
@@ -459,8 +464,10 @@ async function saveConnector(event) {
         config.password = document.getElementById('unifiPassword').value.trim();
     }
     try {
-        const res = await fetch('/api/connectors', {
-            method: 'POST',
+        const url = connectorEditId ? `/api/connectors/${connectorEditId}` : '/api/connectors';
+        const method = connectorEditId ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+            method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, type, enabled, config })
         });
@@ -469,7 +476,7 @@ async function saveConnector(event) {
             showToast(data.error || 'Failed to create connector', 'error');
             return;
         }
-        showToast('Connector created', 'success');
+        showToast(connectorEditId ? 'Connector updated' : 'Connector created', 'success');
         hideAddConnectorForm();
         loadConnectors();
     } catch (e) {
@@ -517,14 +524,45 @@ function renderConnectorsList(items) {
                     <span class="text-xs px-2.5 py-1 rounded-full font-semibold ${statusCls}">${c.enabled ? 'Enabled' : 'Disabled'}</span>
                 </div>
                 <div class="text-xs text-gray-500">Last sync: ${lastSync}</div>
-                <div class="flex gap-2">
+                <div class="flex gap-2 flex-wrap">
                     <button class="btn-secondary" onclick="testConnector(${c.id})"><i class="fas fa-vial mr-2"></i>Test</button>
                     <button class="btn-secondary" onclick="syncConnector(${c.id})"><i class="fas fa-sync mr-2"></i>Sync</button>
+                    <button class="btn-secondary" onclick='editConnector(${JSON.stringify(c.id)})'><i class="fas fa-edit mr-2"></i>Edit</button>
                     <button class="btn-danger" onclick="deleteConnector(${c.id})"><i class="fas fa-trash mr-2"></i>Delete</button>
                 </div>
             </div>
         `;
     }).join('');
+}
+
+async function editConnector(id) {
+    try {
+        const res = await fetch('/api/connectors');
+        const items = await res.json();
+        const c = (items || []).find(x => x.id === id);
+        if (!c) {
+            showToast('Connector not found', 'error');
+            return;
+        }
+        connectorEditId = c.id;
+        showAddConnectorForm();
+        document.getElementById('connectorName').value = c.name || '';
+        document.getElementById('connectorType').value = c.type;
+        document.getElementById('connectorEnabled').checked = !!c.enabled;
+        const details = c.details || {};
+        document.getElementById('unifiBaseUrl').value = details.base_url || '';
+        document.getElementById('unifiSiteId').value = details.site_id || 'default';
+        document.getElementById('unifiVerifySSL').value = details.verify_ssl === false ? 'false' : 'true';
+        // Credentials are not returned for security; user must re-enter
+        document.getElementById('unifiApiKey').value = '';
+        document.getElementById('unifiUsername').value = '';
+        document.getElementById('unifiPassword').value = '';
+        const submitBtn = document.getElementById('connectorSubmitBtn');
+        if (submitBtn) submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Update Connector';
+    } catch (e) {
+        console.error('Edit connector failed', e);
+        showToast('Failed to load connector', 'error');
+    }
 }
 
 async function syncConnector(id) {
