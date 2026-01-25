@@ -561,9 +561,13 @@ def test_connector(**kwargs):
 @api_bp.post('/connectors/<int:id>/sync', tags=[tag_connectors])
 @login_required
 def sync_connector(**kwargs):
-    """Run sync for a specific connector by id."""
+    """Run sync for a specific connector by id.
+
+    Supports dry-run via ?dry_run=true to preview adds/updates/skips without writing.
+    """
     cid = request.view_args['id']
     c = Connector.query.get_or_404(cid)
+    dry_run = request.args.get('dry_run', 'false').lower() == 'true'
     try:
         cfg = decrypt_config(c.config_encrypted)
         if c.type == 'unifi':
@@ -573,9 +577,13 @@ def sync_connector(**kwargs):
                 raise RuntimeError('No clients returned; verify credentials or site ID')
         else:
             return jsonify({'error': f'Unsupported connector type: {c.type}'}), 400
+
         added = 0
         updated = 0
         skipped = 0
+        added_items = []
+        updated_items = []
+        skipped_items = []
 
         # Preload subnets for matching
         subnets = Subnet.query.all()
@@ -596,42 +604,89 @@ def sync_connector(**kwargs):
 
             if not ip_addr:
                 skipped += 1
+                skipped_items.append({'reason': 'missing_ip', 'client': client})
                 continue
 
             subnet = find_subnet_for_ip(ip_addr)
             if not subnet:
-                # No matching subnet; skip to avoid violating IP FK
                 skipped += 1
+                skipped_items.append({'reason': 'no_matching_subnet', 'ip': ip_addr, 'client': client})
                 continue
 
             existing = IP.query.filter_by(address=ip_addr, subnet_id=subnet.id).first()
             if existing:
                 # Update known fields if empty
+                delta = {}
                 if mac and not existing.mac_address:
-                    existing.mac_address = mac
+                    delta['mac_address'] = mac
                 if hostname and not existing.hostname:
-                    existing.hostname = hostname
+                    delta['hostname'] = hostname
                 if manufacturer and not existing.manufacturer:
-                    existing.manufacturer = manufacturer
+                    delta['manufacturer'] = manufacturer
                 if device_type and not existing.device_type:
-                    existing.device_type = device_type
+                    delta['device_type'] = device_type
                 if notes and not existing.notes:
-                    existing.notes = notes
-                existing.status = 'in-use'
-                updated += 1
+                    delta['notes'] = notes
+                if delta:
+                    if not dry_run:
+                        if 'mac_address' in delta:
+                            existing.mac_address = delta['mac_address']
+                        if 'hostname' in delta:
+                            existing.hostname = delta['hostname']
+                        if 'manufacturer' in delta:
+                            existing.manufacturer = delta['manufacturer']
+                        if 'device_type' in delta:
+                            existing.device_type = delta['device_type']
+                        if 'notes' in delta:
+                            existing.notes = delta['notes']
+                        existing.status = 'in-use'
+                    updated += 1
+                    updated_items.append({
+                        'ip': ip_addr,
+                        'subnet': subnet.to_dict(),
+                        'changes': delta
+                    })
+                else:
+                    skipped += 1
+                    skipped_items.append({'reason': 'no_changes', 'ip': ip_addr, 'subnet': subnet.to_dict()})
             else:
-                ip = IP(
-                    address=ip_addr,
-                    hostname=hostname,
-                    subnet_id=subnet.id,
-                    status='in-use',
-                    mac_address=mac,
-                    device_type=device_type,
-                    manufacturer=manufacturer,
-                    notes=notes
-                )
-                db.session.add(ip)
+                if not dry_run:
+                    ip = IP(
+                        address=ip_addr,
+                        hostname=hostname,
+                        subnet_id=subnet.id,
+                        status='in-use',
+                        mac_address=mac,
+                        device_type=device_type,
+                        manufacturer=manufacturer,
+                        notes=notes
+                    )
+                    db.session.add(ip)
                 added += 1
+                added_items.append({
+                    'ip': ip_addr,
+                    'subnet': subnet.to_dict(),
+                    'hostname': hostname,
+                    'mac': mac,
+                    'device_type': device_type,
+                    'manufacturer': manufacturer,
+                    'notes': notes
+                })
+
+        if dry_run:
+            return jsonify({
+                'success': True,
+                'dry_run': True,
+                'connector': c.type,
+                'connector_id': c.id,
+                'clients': len(clients),
+                'added': added,
+                'updated': updated,
+                'skipped': skipped,
+                'added_items': added_items,
+                'updated_items': updated_items,
+                'skipped_items': skipped_items,
+            }), 200
 
         c.last_sync_at = datetime.utcnow()
         db.session.commit()

@@ -1185,6 +1185,63 @@
         </div>
     </div>
 
+    <!-- Sync Preview Modal -->
+    <div id="syncPreviewModal" class="hidden modal-overlay fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden mx-4">
+            <div class="bg-gradient-to-r from-primary-600 to-primary-700 text-white p-5 flex justify-between items-center">
+                <h2 class="text-xl font-semibold">Sync Preview — <span id="previewConnectorName">Connector</span></h2>
+                <button onclick="closePreviewModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                <!-- Summary -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                        <div class="text-xs text-gray-600">Total Clients</div>
+                        <div class="text-2xl font-bold text-primary-600" id="previewClientsCount">0</div>
+                    </div>
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <div class="text-xs text-green-600">New IPs</div>
+                        <div class="text-2xl font-bold text-green-600" id="previewAddedCount">0</div>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div class="text-xs text-blue-600">Updates</div>
+                        <div class="text-2xl font-bold text-blue-600" id="previewUpdatedCount">0</div>
+                    </div>
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                        <div class="text-xs text-yellow-600">Skipped</div>
+                        <div class="text-2xl font-bold text-yellow-600" id="previewSkippedCount">0</div>
+                    </div>
+                </div>
+
+                <!-- Added Items -->
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3">New IPs to Add</h3>
+                    <div id="previewAddedList" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                </div>
+
+                <!-- Updated Items -->
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3">IPs to Update</h3>
+                    <div id="previewUpdatedList" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                </div>
+
+                <!-- Skipped Items -->
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3">Skipped Records</h3>
+                    <div id="previewSkippedList" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                </div>
+            </div>
+            <div class="p-5 border-t border-gray-100 flex gap-3 justify-end">
+                <button onclick="closePreviewModal()" class="btn-secondary">Cancel</button>
+                <button onclick="applyPreviewSync()" class="btn-success">
+                    <i class="fas fa-check mr-2"></i>Apply Changes
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Application JavaScript -->
     <script src="/static/js/app.js"></script>
 </body>

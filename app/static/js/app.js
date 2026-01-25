@@ -15,6 +15,7 @@ let scanInProgress = false;
 let currentScanJobId = null;
 let currentScanDiscovered = [];
 let currentUser = null;
+let previewState = { connectorId: null, connectorName: '', data: null };
 
 // Simple helpers to show/hide modals reliably (since we don't have Tailwind utilities built)
 function showModal(elementId) {
@@ -528,7 +529,8 @@ function renderConnectorsList(items) {
                 <div class="text-xs text-gray-500">Last sync: ${lastSync}</div>
                 <div class="flex gap-2 flex-wrap">
                     <button class="btn-secondary" onclick="testConnector(${c.id})"><i class="fas fa-vial mr-2"></i>Test</button>
-                    <button class="btn-secondary" onclick="syncConnector(${c.id})"><i class="fas fa-sync mr-2"></i>Sync</button>
+                    <button class="btn-secondary" onclick="previewSyncConnector(${c.id}, ${JSON.stringify(c.name)})"><i class="fas fa-eye mr-2"></i>Preview</button>
+                    <button class="btn-secondary" onclick="runSyncConnector(${c.id})"><i class="fas fa-sync mr-2"></i>Sync</button>
                     <button class="btn-secondary" onclick='editConnector(${JSON.stringify(c.id)})'><i class="fas fa-edit mr-2"></i>Edit</button>
                     <button class="btn-danger" onclick="deleteConnector(${c.id})"><i class="fas fa-trash mr-2"></i>Delete</button>
                 </div>
@@ -567,21 +569,131 @@ async function editConnector(id) {
     }
 }
 
-async function syncConnector(id) {
+async function syncConnector(id, { dryRun = false } = {}) {
     try {
-        const res = await fetch(`/api/connectors/${id}/sync`, { method: 'POST' });
+        const url = dryRun ? `/api/connectors/${id}/sync?dry_run=true` : `/api/connectors/${id}/sync`;
+        const res = await fetch(url, { method: 'POST' });
         const data = await res.json();
-        if (!res.ok) {
+        if (!res.ok || data.success === false) {
             showToast(data.error || 'Sync failed', 'error');
-            return;
+            return null;
         }
+        if (dryRun) return data;
+
         showToast(`Sync complete: added ${data.added}, updated ${data.updated}, skipped ${data.skipped}`, 'success');
         loadConnectors();
         loadStats();
+        return data;
     } catch (e) {
         console.error('Sync connector failed', e);
         showToast('Sync failed', 'error');
+        return null;
     }
+}
+
+async function runSyncConnector(id) {
+    if (!confirm('Sync now? This will apply changes.')) return;
+    await syncConnector(id, { dryRun: false });
+}
+
+async function previewSyncConnector(id, connectorName = '') {
+    if (!confirm('Run a preview? No changes will be applied.')) return;
+    showToast('Building preview…', 'info');
+    const data = await syncConnector(id, { dryRun: true });
+    if (!data) return;
+    renderSyncPreview(data, connectorName);
+    showModal('syncPreviewModal');
+}
+
+function renderSyncPreview(data, connectorName = '') {
+    previewState = { connectorId: data.connector_id || null, connectorName, data };
+    document.getElementById('previewConnectorName').textContent = connectorName || `Connector ${data.connector_id || ''}`;
+    document.getElementById('previewClientsCount').textContent = data.clients || 0;
+    document.getElementById('previewAddedCount').textContent = data.added || 0;
+    document.getElementById('previewUpdatedCount').textContent = data.updated || 0;
+    document.getElementById('previewSkippedCount').textContent = data.skipped || 0;
+
+    renderPreviewList('previewAddedList', data.added_items, 'No new IPs to add', renderAddedItem);
+    renderPreviewList('previewUpdatedList', data.updated_items, 'No updates to apply', renderUpdatedItem);
+    renderPreviewList('previewSkippedList', data.skipped_items, 'No skipped records', renderSkippedItem);
+}
+
+function renderPreviewList(targetId, items, emptyText, formatter) {
+    const container = document.getElementById(targetId);
+    if (!container) return;
+    if (!items || !items.length) {
+        container.innerHTML = `<div class="text-xs text-gray-500">${emptyText}</div>`;
+        return;
+    }
+    container.innerHTML = items.map(formatter).join('');
+}
+
+function renderAddedItem(item) {
+    const ip = escapeHtml(item.ip || '-');
+    const subnet = escapeHtml((item.subnet && item.subnet.cidr) || 'Unknown subnet');
+    const hostname = escapeHtml(item.hostname || 'No hostname');
+    const mac = escapeHtml(item.mac || 'No MAC');
+    return `
+        <div class="border border-gray-200 rounded-lg p-2 bg-green-50">
+            <div class="text-sm font-semibold text-gray-800">${ip}</div>
+            <div class="text-xs text-gray-600">${hostname}</div>
+            <div class="text-xs text-gray-500">Subnet: ${subnet}</div>
+            <div class="text-xs text-gray-500">MAC: ${mac}</div>
+        </div>
+    `;
+}
+
+function renderUpdatedItem(item) {
+    const ip = escapeHtml(item.ip || '-');
+    const subnet = escapeHtml((item.subnet && item.subnet.cidr) || 'Unknown subnet');
+    const changes = item.changes || {};
+    const changeList = Object.keys(changes).length
+        ? Object.entries(changes).map(([k, v]) => `${escapeHtml(k)}: ${escapeHtml(String(v))}`).join(', ')
+        : 'No changes';
+    return `
+        <div class="border border-gray-200 rounded-lg p-2 bg-blue-50">
+            <div class="text-sm font-semibold text-gray-800">${ip}</div>
+            <div class="text-xs text-gray-500">Subnet: ${subnet}</div>
+            <div class="text-xs text-gray-600">${changeList}</div>
+        </div>
+    `;
+}
+
+function renderSkippedItem(item) {
+    const ip = escapeHtml(item.ip || (item.client && item.client.ip) || 'No IP');
+    const reason = formatSkipReason(item.reason);
+    return `
+        <div class="border border-gray-200 rounded-lg p-2 bg-yellow-50">
+            <div class="text-sm font-semibold text-gray-800">${ip}</div>
+            <div class="text-xs text-gray-600">${reason}</div>
+        </div>
+    `;
+}
+
+function formatSkipReason(reason) {
+    if (!reason) return 'Skipped';
+    const map = {
+        missing_ip: 'Missing IP address',
+        no_matching_subnet: 'No matching subnet',
+        no_changes: 'No changes to apply'
+    };
+    return map[reason] || reason;
+}
+
+function closePreviewModal() {
+    previewState = { connectorId: null, connectorName: '', data: null };
+    hideModal('syncPreviewModal');
+}
+
+async function applyPreviewSync() {
+    if (!previewState.connectorId) {
+        showToast('No preview to apply', 'error');
+        return;
+    }
+    if (!confirm('Apply these changes?')) return;
+    hideModal('syncPreviewModal');
+    await syncConnector(previewState.connectorId, { dryRun: false });
+    previewState = { connectorId: null, connectorName: '', data: null };
 }
 
 async function testConnector(id) {
