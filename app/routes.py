@@ -586,13 +586,13 @@ def sync_connector(**kwargs):
                     return s
             return None
 
-        for c in clients:
-            ip_addr = c.get('ip')
-            mac = c.get('mac')
-            hostname = c.get('hostname')
-            device_type = c.get('device_type')
-            manufacturer = c.get('manufacturer')
-            notes = c.get('notes')
+        for client in clients:
+            ip_addr = client.get('ip')
+            mac = client.get('mac')
+            hostname = client.get('hostname')
+            device_type = client.get('device_type')
+            manufacturer = client.get('manufacturer')
+            notes = client.get('notes')
 
             if not ip_addr:
                 skipped += 1
