@@ -4,8 +4,8 @@
 
 A self-hosted, Docker-based application for documenting and managing IP addresses, subnets, and network infrastructure.
 
-![Version](https://img.shields.io/badge/version-2.0.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/version-1.0.0--beta.1-blue)
+![License](https://img.shields.io/badge/license-BSL%201.1-orange)
 ![Docker](https://img.shields.io/badge/docker-ready-blue)
 
 ## 🚀 Features
@@ -271,7 +271,31 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 
 ## 📄 License
 
-MIT License - See LICENSE file for details.
+**Business Source License 1.1 (BSL 1.1)**
+
+This project is licensed under the Business Source License 1.1, with the Change Date set to January 25, 2030.
+
+### What This Means
+
+✅ **You CAN:**
+- Use NetDoc IPAM for non-commercial purposes (internal use, research, evaluation)
+- Modify the source code for your own non-commercial use
+- Deploy it internally for your organization
+- Contribute improvements back to the project
+
+❌ **You CANNOT:**
+- Use it for commercial purposes without a commercial license
+- Offer it as a service to customers or clients
+- Resell it or bundle it with commercial products
+- Generate revenue directly or indirectly from it
+
+### Commercial Licensing
+
+If you want to use NetDoc IPAM commercially or in a production SaaS environment, please contact the licensor for a commercial license agreement.
+
+### Automatic Conversion
+
+On **January 25, 2030**, this license will automatically convert to **Apache License 2.0** (fully open source with no commercial restrictions).
 
 ---
 

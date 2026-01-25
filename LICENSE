@@ -1,0 +1,185 @@
+Business Source License 1.1
+
+Parameters
+
+Licensor: iamozyth
+Licensed Work: NetDoc IPAM
+Full name of Licensed Work: NetDoc IPAM - IP Address Management System
+Change Date: January 25, 2030
+Change License: Apache License 2.0
+
+For information about alternative licensing arrangements for the Licensed Work,
+please contact: [your email/contact]
+
+Notice
+
+The Business Source License (this document, or the "License") is not an Open
+Source license. However, the Licensed Work will eventually be made available
+under an Open Source License, as stated in this License.
+
+Business Source License 1.1
+
+Terms
+
+The Licensor hereby grants you the right to copy, modify, create derivative
+works, redistribute, and make non-production use of the Licensed Work. The
+Licensor may make an Additional Use Grant, above, permitting limited production
+use.
+
+Effective on the Change Date, or if earlier the date such Licensed Work is
+made generally available by Licensor as generally available via a public source
+code repository, this License will automatically convert to the Change License.
+
+1. Definitions
+
+1.0.1 "Licensor" means any legal entity that is licensing the Licensed Work
+under this License. For legal entities, "the licensor" includes any other
+entity that controls, is controlled by, or is under common control with the
+licensor. For the purposes of this definition, "control" means the power, direct
+or indirect, to cause the direction or management of such entity, whether by
+contract or otherwise, or ownership of fifty percent (50%) or more of the
+outstanding shares, or beneficial ownership of such entity.
+
+1.0.2 "Licensed Work" means the work of authorship, whether in Source or Object
+form, made available under the License, as indicated by a copyright notice that
+is included in or attached to the work (an example is provided in the Appendix
+below).
+
+1.0.3 "Additional Use Grant" means a form of grant, executed by Licensor and
+included in the License or in a separate instrument executed by Licensor, to
+permit use of the Licensed Work that is otherwise prohibited, but only to the
+extent permitted by the terms of that Additional Use Grant.
+
+1.0.4 "Derivative Works" means any work, whether in Source or Object form, that
+is based on (or derived from) the Licensed Work and for which the editorial
+revisions, annotations, elaborations, or other modifications represent, as a
+whole, an original work of authorship, as determined by the U.S. Copyright
+Office.
+
+1.0.5 "Licensor" means any legal entity that is licensing the Licensed Work
+and any other legal entity that is related to the licensor (i.e., parent,
+subsidiary, or affiliate entity).
+
+1.0.6 "Object" means any machine-readable work that results from the
+transformation of a Source work by a compiler, assembler or other similar
+process, but does not include the Source of that work.
+
+1.0.7 "Source" means the form of the Licensed Work preferred for making
+modifications.
+
+1.0.8 "You" means each legal entity exercising permissions granted by this
+License. For legal entities, "you" includes any other entity that controls,
+is controlled by, or is under common control with you. For the purposes of
+this definition, "control" means the power, direct or indirect, to cause the
+direction or management of such entity, whether by contract or otherwise, or
+ownership of fifty percent (50%) or more of the outstanding shares, or
+beneficial ownership of such entity.
+
+2. Grant and Conditions
+
+2.1 Grant. Subject to the terms and conditions of this License, the Licensor
+hereby grants to You a worldwide, royalty-free, non-exclusive, non-transferable
+license during the term of this License to:
+
+(a) copy, reproduce, and distribute the Licensed Work in Source or Object form;
+
+(b) prepare, create Derivative Works based upon the Licensed Work;
+
+(c) perform, display, and distribute the Licensed Work and any Derivative Works
+thereof; and
+
+(d) change the Licensed Work.
+
+The foregoing rights are granted for non-production purposes only, which means
+any use of the Licensed Work is expressly restricted to uses that are not
+directed to generating revenue or any other form of direct or indirect economic
+benefit.
+
+For clarity, any use is permitted that does not generate or is not directed
+towards generating economic value or revenue, including use for research,
+evaluation or testing (but not including quality assurance (QA) or user
+acceptance testing (UAT)). Except as expressly provided in the Additional Use
+Grant, if any, non-production use is the only permitted use of the Licensed
+Work.
+
+2.2 Conditions.
+
+2.2.1 Respect Licensor Rights Notice.
+
+If You distribute the Licensed Work or any Derivative Works thereof, You must
+provide notice that the Licensed Work is provided under this License, and You
+must include a copy of this License. If You distribute the Licensed Work or
+Derivative Works thereof in Object form, You must provide the Source of the
+Licensed Work in a form that is compatible with Your distribution, to any
+recipient who has requested such information from You, including by providing a
+mechanism to access the Source of the Licensed Work via the same source code
+repository from which You distribute the Licensed Work.
+
+2.2.2 Change License Conversion.
+
+On the later of (a) the Change Date or (b) the date on which the Licensed Work
+is made available by Licensor as generally available via a public source code
+repository, this License will automatically convert to the Change License.
+
+The Change License shall be the Apache License, Version 2.0, with the addition
+of the following condition: any use of the Licensed Work in a production
+capacity shall be permitted.
+
+3. Limitations
+
+3.1 No trademark licenses are granted under this License, and in connection
+with the Licensed Work. Licensor retains the right to enforce (and you
+expressly consent to assist Licensor in enforcing) any trademarks associated
+with the Licensed Work.
+
+3.2 If You institute patent litigation against Licensor or any other entity
+(including a non-profit organization or government agency, but excluding a
+university, college, or research institution) alleging that the Licensed Work
+infringes Your patent(s), then the rights granted to You under this License
+shall terminate as of the date of such assertion or allegation.
+
+3.3 This License does not grant you the right to sub-license, sell, resell,
+lease, lend, transfer, assign or otherwise dispose of the Licensed Work.
+
+4. Term
+
+4.1 This License shall commence on the date it is first distributed by Licensor
+unless an earlier date is specified in the License.
+
+4.2 The term of this License will end on the Change Date unless converted
+earlier under Section 2.2.2.
+
+5. No Other Rights
+
+Except for the rights expressly granted herein and to the extent any other
+rights would be implied by law if this License did not exist, all other rights
+are reserved by Licensor.
+
+6. Interpretation
+
+6.1 All terms used in this License will be construed to have the same meaning
+as in the Change License on the Change Date.
+
+7. Disclaimer of Warranty
+
+THE LICENSED WORK IS PROVIDED ON AN "AS IS" BASIS. LICENSOR HEREBY DISCLAIMS
+ALL WARRANTIES AND CONDITIONS, EXPRESS OR IMPLIED, INCLUDING (WITHOUT
+LIMITATION) WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
+NONINFRINGEMENT, AND TITLE.
+
+8. Limitation of Liability
+
+UNDER NO CIRCUMSTANCES AND UNDER NO LEGAL THEORY, WHETHER IN TORT (INCLUDING
+NEGLIGENCE), CONTRACT, OR OTHERWISE, UNLESS OTHERWISE PROVIDED IN THIS LICENSE
+OR AGREED TO IN WRITING, SHALL LICENSOR BE LIABLE TO YOU FOR DAMAGES,
+INCLUDING ANY DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES
+OF ANY CHARACTER ARISING AS A RESULT OF THIS LICENSE OR OUT OF THE USE OR
+INABILITY TO USE THE LICENSED WORK (INCLUDING BUT NOT LIMITED TO DAMAGES FOR
+LOSS OF GOODWILL, WORK STOPPAGE, COMPUTER FAILURE OR MALFUNCTION, OR ANY AND
+ALL OTHER COMMERCIAL DAMAGES OR LOSSES), EVEN IF LICENSOR HAS BEEN ADVISED OF
+THE POSSIBILITY OF SUCH DAMAGES.
+
+9. Acceptance
+
+By using the Licensed Work, You accept and agree to be bound by the terms and
+conditions of this License.
