@@ -72,27 +72,12 @@ def create_app():
     # Use register_blueprint for standard Flask blueprints
     app.register_blueprint(main_bp)
     
-    # Create tables with retry logic
+    # Initialize Flask-Migrate for database schema management
+    from flask_migrate import Migrate
+    Migrate(app, db)
+    
+    # Initialize background scheduler
     with app.app_context():
-        max_retries = 5
-        retry_delay = 2
-        
-        for attempt in range(max_retries):
-            try:
-                logger.info(f"Attempting to connect to database (attempt {attempt + 1}/{max_retries})...")
-                db.create_all()
-                logger.info("Database tables created successfully!")
-                break
-            except Exception as e:
-                if attempt < max_retries - 1:
-                    logger.warning(f"Database connection failed: {e}. Retrying in {retry_delay} seconds...")
-                    time.sleep(retry_delay)
-                    retry_delay *= 2  # Exponential backoff
-                else:
-                    logger.error(f"Failed to connect to database after {max_retries} attempts: {e}")
-                    raise
-        
-        # Initialize background scheduler
         try:
             from app.scheduler import init_scheduler
             init_scheduler(app)
