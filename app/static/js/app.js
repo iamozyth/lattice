@@ -433,13 +433,15 @@ async function syncUnifiConnector() {
     }
 }
 
-function showAddConnectorForm() {
+function showAddConnectorForm({ resetForm = true } = {}) {
     const el = document.getElementById('addConnectorForm');
     if (el) el.classList.remove('hidden');
-    connectorEditId = null;
-    document.getElementById('connectorForm')?.reset();
-    const submitBtn = document.getElementById('connectorSubmitBtn');
-    if (submitBtn) submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Save Connector';
+    if (resetForm) {
+        connectorEditId = null;
+        document.getElementById('connectorForm')?.reset();
+        const submitBtn = document.getElementById('connectorSubmitBtn');
+        if (submitBtn) submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Save Connector';
+    }
 }
 
 function hideAddConnectorForm() {
@@ -537,6 +539,7 @@ function renderConnectorsList(items) {
 
 async function editConnector(id) {
     try {
+        connectorEditId = id;
         const res = await fetch('/api/connectors');
         const items = await res.json();
         const c = (items || []).find(x => x.id === id);
@@ -544,8 +547,7 @@ async function editConnector(id) {
             showToast('Connector not found', 'error');
             return;
         }
-        connectorEditId = c.id;
-        showAddConnectorForm();
+        showAddConnectorForm({ resetForm: false });
         document.getElementById('connectorName').value = c.name || '';
         document.getElementById('connectorType').value = c.type;
         document.getElementById('connectorEnabled').checked = !!c.enabled;
