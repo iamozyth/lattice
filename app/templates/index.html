@@ -122,8 +122,9 @@
                         <i class="fas fa-book"></i>
                     </a>
                     
-                    <button onclick="showSettingsModal()" class="p-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors" title="Settings">
+                    <button onclick="showSettingsModal()" class="relative p-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors" title="Settings">
                         <i class="fas fa-cog"></i>
+                        <span id="headerUpdateBadge" class="hidden absolute -top-1 -right-1 w-3 h-3 rounded-full bg-amber-500"></span>
                     </button>
                     
                     <button onclick="handleLogout()" class="p-2.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Logout">
@@ -988,16 +989,19 @@
                         <h3 class="text-sm font-semibold text-gray-700">Application & Updates</h3>
                     </div>
                     <div class="bg-gray-50 rounded-lg p-4 space-y-4">
-                        <div class="flex justify-between items-center py-2">
-                            <span class="text-gray-600">Version:</span>
-                            <span class="font-medium text-gray-800 font-mono" id="appVersion">-</span>
+                        <div class="flex justify-between items-center py-2 gap-3">
+                            <div class="text-gray-600">Version:</div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium text-gray-800 font-mono" id="appVersion">-</span>
+                                <span id="versionBadge" class="text-xs px-2.5 py-1 rounded-full font-semibold bg-gray-200 text-gray-700">Checking...</span>
+                            </div>
                         </div>
                         <div class="border-t border-gray-200 pt-4">
                             <div class="flex justify-between items-center mb-3">
                                 <span class="text-gray-600">Update Status:</span>
-                                <span class="text-xs px-3 py-1 bg-gray-200 text-gray-700 rounded-full font-medium" id="updateStatus">Checking...</span>
+                                <span class="text-xs px-3 py-1 bg-gray-200 text-gray-700 rounded-full font-semibold" id="updateStatus">Checking...</span>
                             </div>
-                            <button onclick="checkForUpdates()" class="w-full btn-primary text-sm">
+                            <button id="updateCheckBtn" onclick="checkForUpdates()" class="w-full btn-primary text-sm">
                                 <i class="fas fa-sync mr-2"></i>Check for Updates
                             </button>
                         </div>

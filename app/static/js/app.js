@@ -1674,7 +1674,19 @@ async function loadVersion() {
 async function checkForUpdates() {
     const btn = document.getElementById('updateCheckBtn');
     if (btn) btn.disabled = true;
-    
+    const statusEl = document.getElementById('updateStatus');
+    const versionBadge = document.getElementById('versionBadge');
+    const headerBadge = document.getElementById('headerUpdateBadge');
+
+    const setPill = (el, text, colorClass) => {
+        if (!el) return;
+        el.textContent = text;
+        el.className = `text-xs px-2.5 py-1 rounded-full font-semibold ${colorClass}`;
+    };
+
+    setPill(statusEl, 'Checking...', 'bg-gray-200 text-gray-700');
+    setPill(versionBadge, 'Checking...', 'bg-gray-200 text-gray-700');
+
     try {
         console.log('[Updates] Checking for updates...');
         const res = await fetch('/api/auth/check-updates');
@@ -1683,44 +1695,45 @@ async function checkForUpdates() {
         if (!res.ok) {
             console.error('[Updates] HTTP error:', res.status, res.statusText);
             showToast(`Update check failed: ${res.status}`, 'error');
-            if (document.getElementById('updateStatus')) {
-                document.getElementById('updateStatus').textContent = 'Check failed';
-            }
+            setPill(statusEl, 'Check failed', 'bg-red-100 text-red-700');
+            setPill(versionBadge, 'Check failed', 'bg-red-100 text-red-700');
+            if (headerBadge) headerBadge.classList.add('hidden');
             return;
         }
         
         const data = await res.json();
         console.log('[Updates] Response data:', data);
         
-        if (document.getElementById('updateStatus')) {
-            if (data.error) {
-                console.warn('[Updates] API error:', data.error);
-                document.getElementById('updateStatus').textContent = 'Check failed';
-                showToast(`Update check failed: ${data.error}`, 'warning');
-            } else if (data.update_available) {
-                console.log('[Updates] Update available:', data.latest_version);
-                document.getElementById('updateStatus').textContent = `Update available: ${data.latest_version}`;
-                const badge = document.getElementById('updateBadge');
-                if (badge) badge.classList.remove('hidden');
-                showToast(`Version ${data.latest_version} available!`, 'info');
-                if (data.release_url) {
-                    const updateLink = document.querySelector('.update-link');
-                    if (updateLink) updateLink.href = data.release_url;
-                }
-            } else {
-                console.log('[Updates] Already up to date');
-                document.getElementById('updateStatus').textContent = 'Up to date';
-                const badge = document.getElementById('updateBadge');
-                if (badge) badge.classList.add('hidden');
-                showToast('You are running the latest version!', 'success');
+        if (data.error) {
+            console.warn('[Updates] API error:', data.error);
+            setPill(statusEl, 'Check failed', 'bg-red-100 text-red-700');
+            setPill(versionBadge, 'Check failed', 'bg-red-100 text-red-700');
+            if (headerBadge) headerBadge.classList.add('hidden');
+            showToast(`Update check failed: ${data.error}`, 'warning');
+        } else if (data.update_available) {
+            console.log('[Updates] Update available:', data.latest_version);
+            const latest = data.latest_version || 'new version';
+            setPill(statusEl, `Update available: ${latest}`, 'bg-amber-100 text-amber-700');
+            setPill(versionBadge, 'Update available', 'bg-amber-100 text-amber-700');
+            if (headerBadge) headerBadge.classList.remove('hidden');
+            showToast(`Version ${latest} available!`, 'info');
+            if (data.release_url) {
+                const updateLink = document.querySelector('.update-link');
+                if (updateLink) updateLink.href = data.release_url;
             }
+        } else {
+            console.log('[Updates] Already up to date');
+            setPill(statusEl, 'Up to date', 'bg-emerald-100 text-emerald-700');
+            setPill(versionBadge, 'Up to date', 'bg-emerald-100 text-emerald-700');
+            if (headerBadge) headerBadge.classList.add('hidden');
+            showToast('You are running the latest version!', 'success');
         }
     } catch (error) {
         console.error('[Updates] Error checking updates:', error);
         showToast(`Update check error: ${error.message}`, 'error');
-        if (document.getElementById('updateStatus')) {
-            document.getElementById('updateStatus').textContent = 'Check failed';
-        }
+        setPill(statusEl, 'Check failed', 'bg-red-100 text-red-700');
+        setPill(versionBadge, 'Check failed', 'bg-red-100 text-red-700');
+        if (headerBadge) headerBadge.classList.add('hidden');
     } finally {
         if (btn) btn.disabled = false;
     }
