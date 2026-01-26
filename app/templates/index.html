@@ -152,6 +152,11 @@
             z-index: 50;
         }
 
+        /* Decorative pattern backgrounds should not block clicks */
+        .pattern-bg {
+            pointer-events: none;
+        }
+
         /* ===== Premium Form Elements ===== */
         .input-field {
             width: 100%;
@@ -172,6 +177,10 @@
         }
 
         /* ===== Premium Buttons ===== */
+        .btn-primary, .btn-secondary, .btn-danger, .btn-success {
+            cursor: pointer;
+        }
+
         .btn-primary {
             display: inline-flex;
             align-items: center;
@@ -685,7 +694,7 @@
     <div id="subnetModal" class="hidden modal-overlay">
         <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-2xl max-h-[90vh] overflow-hidden mx-4 scale-in border border-surface-200/50">
             <div class="bg-gradient-to-r from-primary-600 via-primary-600 to-accent-600 text-white p-6 flex justify-between items-center relative overflow-hidden">
-                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="pattern-bg absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
                 <div class="relative">
                     <h2 class="text-xl font-bold" id="modalTitle">New Subnet</h2>
                     <p class="text-primary-200 text-sm mt-0.5">Configure your network segment</p>
@@ -768,7 +777,7 @@
     <div id="ipModal" class="hidden modal-overlay">
         <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-2xl max-h-[90vh] overflow-hidden mx-4 scale-in border border-surface-200/50">
             <div class="bg-gradient-to-r from-emerald-600 via-emerald-600 to-teal-600 text-white p-6 flex justify-between items-center relative overflow-hidden">
-                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="pattern-bg absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
                 <div class="relative">
                     <h2 class="text-xl font-bold" id="ipModalTitle">New IP Address</h2>
                     <p class="text-emerald-200 text-sm mt-0.5">Document a network address</p>
@@ -887,7 +896,7 @@
     <div id="detailModal" class="hidden modal-overlay">
         <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-5xl max-h-[90vh] overflow-hidden mx-4 scale-in border border-surface-200/50">
             <div id="detailHeader" class="bg-gradient-to-r from-primary-600 via-primary-600 to-accent-600 text-white p-6 relative overflow-hidden">
-                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="pattern-bg absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
                 <div class="flex justify-between items-start relative">
                     <div>
                         <h2 class="text-2xl font-bold" id="detailSubnetName"></h2>
@@ -984,7 +993,7 @@
     <div id="lookupModal" class="hidden modal-overlay">
         <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-lg mx-4 overflow-hidden scale-in border border-surface-200/50">
             <div class="bg-gradient-to-r from-accent-600 via-accent-600 to-purple-600 text-white p-6 flex justify-between items-center relative overflow-hidden">
-                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="pattern-bg absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
                 <div class="relative">
                     <h2 class="text-xl font-bold">IP Lookup</h2>
                     <p class="text-accent-200 text-sm mt-0.5">Search for an IP address</p>
@@ -1010,7 +1019,7 @@
     <div id="bulkModal" class="hidden modal-overlay">
         <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-lg mx-4 overflow-hidden scale-in border border-surface-200/50">
             <div class="bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 text-white p-6 flex justify-between items-center relative overflow-hidden">
-                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="pattern-bg absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
                 <div class="relative">
                     <h2 class="text-xl font-bold">Bulk Add IPs</h2>
                     <p class="text-amber-100 text-sm mt-0.5">Import multiple addresses at once</p>
@@ -1037,7 +1046,7 @@
     <div id="scanModal" class="hidden modal-overlay">
         <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-3xl mx-4 overflow-hidden scale-in border border-surface-200/50">
             <div class="bg-gradient-to-r from-indigo-600 via-indigo-600 to-violet-600 text-white p-6 flex justify-between items-center relative overflow-hidden">
-                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="pattern-bg absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
                 <div class="relative">
                     <h2 class="text-xl font-bold">Scan Subnet</h2>
                     <p class="text-indigo-200 text-sm mt-0.5">Discover active hosts</p>
@@ -1107,7 +1116,7 @@
     <div id="importModal" class="hidden modal-overlay">
         <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-lg mx-4 overflow-hidden scale-in border border-surface-200/50">
             <div class="bg-gradient-to-r from-teal-600 via-teal-600 to-cyan-600 text-white p-6 flex justify-between items-center relative overflow-hidden">
-                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="pattern-bg absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
                 <div class="relative">
                     <h2 class="text-xl font-bold">Import Data</h2>
                     <p class="text-teal-200 text-sm mt-0.5">Restore from backup file</p>
@@ -1144,7 +1153,7 @@
     <div id="setupModal" class="hidden modal-overlay">
         <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-md mx-4 overflow-hidden scale-in border border-surface-200/50">
             <div class="bg-gradient-to-r from-primary-600 via-primary-600 to-accent-600 text-white p-8 relative overflow-hidden">
-                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="pattern-bg absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
                 <div class="relative">
                     <div class="flex items-center gap-3 mb-3">
                         <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
@@ -1226,7 +1235,7 @@
     <div id="loginModal" class="hidden modal-overlay">
         <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-md mx-4 overflow-hidden scale-in border border-surface-200/50">
             <div class="bg-gradient-to-r from-primary-600 via-primary-600 to-accent-600 text-white p-8 flex flex-col items-center justify-center relative overflow-hidden">
-                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="pattern-bg absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
                 <div class="relative">
                     <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
                         <i class="fas fa-network-wired text-2xl"></i>
@@ -1257,7 +1266,7 @@
     <div id="registerModal" class="hidden modal-overlay">
         <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-md mx-4 overflow-hidden scale-in border border-surface-200/50">
             <div class="bg-gradient-to-r from-emerald-600 via-emerald-600 to-teal-600 text-white p-8 flex flex-col items-center justify-center relative overflow-hidden">
-                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="pattern-bg absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
                 <div class="relative">
                     <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
                         <i class="fas fa-user-plus text-2xl"></i>
@@ -1332,7 +1341,7 @@
     <div id="settingsModal" class="hidden modal-overlay">
         <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-2xl mx-4 overflow-hidden max-h-[90vh] flex flex-col scale-in border border-surface-200/50">
             <div class="bg-gradient-to-r from-surface-700 via-surface-700 to-surface-800 text-white p-6 flex justify-between items-center sticky top-0 relative overflow-hidden">
-                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="pattern-bg absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
                 <div class="relative">
                     <h2 class="text-xl font-bold">Advanced Settings</h2>
                     <p class="text-surface-400 text-sm mt-0.5">Manage your account and preferences</p>
@@ -1496,7 +1505,7 @@
     <div id="adminUsersModal" class="hidden modal-overlay">
         <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-4xl mx-4 overflow-hidden max-h-[90vh] scale-in border border-surface-200/50">
             <div class="bg-gradient-to-r from-accent-600 via-accent-600 to-purple-600 text-white p-6 flex justify-between items-center relative overflow-hidden">
-                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="pattern-bg absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
                 <div class="relative">
                     <h2 class="text-xl font-bold">User Management</h2>
                     <p class="text-accent-200 text-sm mt-0.5">Manage user accounts and permissions</p>
@@ -1555,7 +1564,7 @@
     <div id="syncPreviewModal" class="hidden modal-overlay">
         <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-4xl max-h-[90vh] overflow-hidden mx-4 scale-in border border-surface-200/50">
             <div class="bg-gradient-to-r from-primary-600 via-primary-600 to-accent-600 text-white p-6 flex justify-between items-center relative overflow-hidden">
-                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="pattern-bg absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
                 <div class="relative">
                     <h2 class="text-xl font-bold">Sync Preview — <span id="previewConnectorName">Connector</span></h2>
                     <p class="text-primary-200 text-sm mt-0.5">Review changes before applying</p>
