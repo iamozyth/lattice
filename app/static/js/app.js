@@ -1534,7 +1534,7 @@ function closeDetailModal() {
 function editCurrentSubnet() {
     const subnet = allSubnets.find(s => s.id === currentSubnetId);
     if (!subnet) return;
-    
+
     document.getElementById('modalTitle').textContent = 'Edit Subnet';
     document.getElementById('subnetName').value = subnet.name;
     document.getElementById('subnetCIDR').value = subnet.cidr;
@@ -1546,9 +1546,9 @@ function editCurrentSubnet() {
     document.getElementById('subnetEnvironment').value = subnet.environment || '';
     document.getElementById('subnetLocation').value = subnet.location || '';
     document.getElementById('subnetTags').value = (subnet.tags || []).join(', ');
-    
+
     closeDetailModal();
-    document.getElementById('subnetModal').classList.remove('hidden');
+    showModal('subnetModal');
 }
 
 async function deleteCurrentSubnet() {
@@ -2029,11 +2029,11 @@ function showExportModal() {
 function showImportModal() {
     document.getElementById('importFile').value = '';
     document.getElementById('importReplace').checked = false;
-    document.getElementById('importModal').classList.remove('hidden');
+    showModal('importModal');
 }
 
 function closeImportModal() {
-    document.getElementById('importModal').classList.add('hidden');
+    hideModal('importModal');
 }
 
 async function handleImportFile(event) {
