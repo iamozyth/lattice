@@ -1092,31 +1092,34 @@ async function loadSubnets() {
         const environment = document.getElementById('filterEnvironment')?.value || '';
         const vlan = document.getElementById('filterVLAN')?.value || '';
         const sortBy = document.getElementById('sortBy')?.value || 'cidr';
-        
+
         if (search) params.append('search', search);
         if (environment) params.append('environment', environment);
         if (vlan) params.append('vlan', vlan);
         params.append('sort', sortBy);
-        
+        params.append('per_page', '500'); // Load all for now (pagination UI can be added later)
+
         console.log('[Subnets] Fetching from /api/subnets?', params.toString());
         const response = await fetch(`/api/subnets?${params}`);
         console.log('[Subnets] Response status:', response.status, 'redirected:', response.redirected);
-        
+
         const contentType = response.headers.get('content-type') || '';
         const looksJson = contentType.includes('application/json');
-        
+
         if (response.status === 401 || response.status === 403 || response.redirected || !looksJson) {
             // Likely not authenticated anymore; show login modal and stop.
             console.warn('[Subnets] Not authorized or redirected, showing login modal');
             showModal('loginModal');
             throw new Error('Not authenticated. Please log in.');
         }
-        
+
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
-        allSubnets = await response.json();
+
+        const data = await response.json();
+        // Handle both paginated response and legacy array response
+        allSubnets = data.items || data;
         console.log('[Subnets] Loaded', allSubnets.length, 'subnets');
         renderSubnets(allSubnets);
         loadStats();
@@ -1261,21 +1264,32 @@ async function loadAllIPs() {
         const params = new URLSearchParams();
         const search = document.getElementById('globalSearch')?.value || '';
         const status = document.getElementById('ipFilterStatus')?.value || '';
-        
+
         if (search) params.append('search', search);
         if (status) params.append('status', status);
-        
+        params.append('per_page', '500'); // Load more for table view
+
         const response = await fetch(`/api/ips?${params}`);
-        allIPs = await response.json();
-        renderIPsTable(allIPs);
+        if (!response.ok) {
+            if (response.status === 401) {
+                showModal('loginModal');
+                return;
+            }
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        // Handle both paginated response and legacy array response
+        allIPs = data.items || data;
+        renderIPsTable(allIPs, data.total);
     } catch (error) {
         console.error('Error loading IPs:', error);
     }
 }
 
-function renderIPsTable(ips) {
+function renderIPsTable(ips, total) {
     const tbody = document.getElementById('ipsTableBody');
-    document.getElementById('ipCount').textContent = `${ips.length} IP addresses`;
+    const count = total || ips.length;
+    document.getElementById('ipCount').textContent = `${count} IP addresses`;
     
     if (ips.length === 0) {
         tbody.innerHTML = `

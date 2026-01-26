@@ -1,13 +1,14 @@
 from flask import Blueprint, jsonify, request, render_template, send_from_directory, current_app
 from flask_login import login_required, current_user
 from flask_openapi3 import APIBlueprint, Tag
-from app import db
+from app import db, limiter
 from app.models import Subnet, IP, ip_sort_key, Connector
 from app.scanner import NetworkScanner, scan_jobs
 from app.connectors.unifi import UniFiConnector
 from app.security import encrypt_config, decrypt_config
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 import json
 import ipaddress
 import os
@@ -17,6 +18,11 @@ import logging
 logger = logging.getLogger(__name__)
 scanner = NetworkScanner()
 unifi_connector = UniFiConnector()
+
+# Constants for pagination
+DEFAULT_PAGE_SIZE = 50
+MAX_PAGE_SIZE = 500
+MAX_SEARCH_LENGTH = 200
 
 api_bp = APIBlueprint('api', __name__, url_prefix='/api')
 main_bp = Blueprint('main', __name__)
@@ -44,32 +50,41 @@ def get_stats():
     """Get dashboard statistics"""
     total_subnets = Subnet.query.count()
     total_ips = IP.query.count()
-    
-    # IP status breakdown
+
+    # IP status breakdown - single query
     status_counts = db.session.query(
         IP.status, func.count(IP.id)
     ).group_by(IP.status).all()
     status_breakdown = {status: count for status, count in status_counts}
-    
-    # Calculate total capacity and utilization
-    subnets = Subnet.query.all()
+
+    # Calculate total capacity and utilization using eager loading
+    # Use joinedload to prevent N+1 queries
+    subnets = Subnet.query.options(joinedload(Subnet.ips)).all()
     total_capacity = 0
     total_used = 0
-    
+
     for subnet in subnets:
-        data = subnet.to_dict()
-        total_capacity += data['usable_ips']
-        total_used += data['used_ips']
-    
-    # Environment breakdown
+        # Calculate directly without calling to_dict() to avoid extra queries
+        try:
+            network = subnet.get_network()
+            if network:
+                usable = max(0, network.num_addresses - 2) if network.num_addresses > 2 else network.num_addresses
+                total_capacity += usable
+                total_used += len(subnet.ips)
+        except Exception:
+            pass
+
+    # Environment breakdown - single query
     env_counts = db.session.query(
         Subnet.environment, func.count(Subnet.id)
     ).group_by(Subnet.environment).all()
     env_breakdown = {env or 'unassigned': count for env, count in env_counts}
-    
-    # Recent activity (last 10 IPs added/modified)
-    recent_ips = IP.query.order_by(IP.updated_at.desc()).limit(10).all()
-    
+
+    # Recent activity (last 10 IPs added/modified) with eager load of subnet
+    recent_ips = IP.query.options(
+        joinedload(IP.subnet)
+    ).order_by(IP.updated_at.desc()).limit(10).all()
+
     return jsonify({
         'total_subnets': total_subnets,
         'total_ips': total_ips,
@@ -89,15 +104,20 @@ def get_stats():
 @api_bp.get('/subnets', tags=[tag_subnets])
 @login_required
 def get_subnets():
-    """Get all subnets with optional filtering"""
-    search = request.args.get('search', '')
+    """Get all subnets with optional filtering and pagination"""
+    search = request.args.get('search', '').strip()[:MAX_SEARCH_LENGTH]
     environment = request.args.get('environment')
     vlan = request.args.get('vlan')
     sort_by = request.args.get('sort', 'cidr')
     sort_order = request.args.get('order', 'asc')
-    
-    query = Subnet.query
-    
+
+    # Pagination parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', DEFAULT_PAGE_SIZE, type=int), MAX_PAGE_SIZE)
+
+    # Use eager loading for IPs count
+    query = Subnet.query.options(joinedload(Subnet.ips))
+
     if search:
         query = query.filter(
             (Subnet.name.ilike(f'%{search}%')) |
@@ -106,13 +126,16 @@ def get_subnets():
             (Subnet.location.ilike(f'%{search}%')) |
             (Subnet.tags.ilike(f'%{search}%'))
         )
-    
+
     if environment:
         query = query.filter(Subnet.environment == environment)
-    
+
     if vlan:
-        query = query.filter(Subnet.vlan == int(vlan))
-    
+        try:
+            query = query.filter(Subnet.vlan == int(vlan))
+        except ValueError:
+            pass
+
     # Sorting
     if sort_by == 'name':
         order_col = Subnet.name
@@ -122,35 +145,47 @@ def get_subnets():
         order_col = Subnet.created_at
     else:
         order_col = Subnet.cidr
-    
+
     if sort_order == 'desc':
         order_col = order_col.desc()
-    
-    subnets = query.order_by(order_col).all()
-    
+
+    # Get total count for pagination metadata
+    total = query.count()
+
+    # Apply pagination
+    subnets = query.order_by(order_col).offset((page - 1) * per_page).limit(per_page).all()
+
     # Sort by IP for CIDR (proper numeric sort)
+    subnets_data = [subnet.to_dict() for subnet in subnets]
     if sort_by == 'cidr':
-        subnets_data = [subnet.to_dict() for subnet in subnets]
         subnets_data.sort(key=lambda x: ip_sort_key(x['first_ip'] or '0.0.0.0'), reverse=(sort_order == 'desc'))
-        return jsonify(subnets_data)
-    
-    return jsonify([subnet.to_dict() for subnet in subnets])
+
+    # Return with pagination metadata
+    return jsonify({
+        'items': subnets_data,
+        'total': total,
+        'page': page,
+        'per_page': per_page,
+        'pages': (total + per_page - 1) // per_page
+    })
 
 
 @api_bp.get('/subnets/<int:id>', tags=[tag_subnets])
+@login_required
 def get_subnet(**kwargs):
     """Get a specific subnet with its IPs"""
     id = request.view_args['id']
-    subnet = Subnet.query.get_or_404(id)
+    subnet = Subnet.query.options(joinedload(Subnet.ips)).get_or_404(id)
     return jsonify(subnet.to_dict(include_ips=True))
 
 
 @api_bp.get('/subnets/<int:id>/available-ips', tags=[tag_subnets])
+@login_required
 def get_available_ips(**kwargs):
     """Get available IPs in a subnet"""
     id = request.view_args['id']
-    subnet = Subnet.query.get_or_404(id)
-    limit = request.args.get('limit', 50, type=int)
+    subnet = Subnet.query.options(joinedload(Subnet.ips)).get_or_404(id)
+    limit = min(request.args.get('limit', 50, type=int), 200)
     return jsonify({
         'subnet_id': id,
         'available_ips': subnet.get_available_ips(limit=limit),
@@ -159,6 +194,8 @@ def get_available_ips(**kwargs):
 
 
 @api_bp.post('/subnets', tags=[tag_subnets])
+@login_required
+@limiter.limit("30 per minute")
 def create_subnet():
     """Create a new subnet"""
     try:
@@ -212,6 +249,8 @@ def create_subnet():
 
 
 @api_bp.put('/subnets/<int:id>', tags=[tag_subnets])
+@login_required
+@limiter.limit("30 per minute")
 def update_subnet(**kwargs):
     """Update a subnet"""
     id = request.view_args['id']
@@ -261,6 +300,8 @@ def update_subnet(**kwargs):
 
 
 @api_bp.delete('/subnets/<int:id>', tags=[tag_subnets])
+@login_required
+@limiter.limit("10 per minute")
 def delete_subnet(**kwargs):
     """Delete a subnet and all associated IPs"""
     id = request.view_args['id']
@@ -279,18 +320,27 @@ def delete_subnet(**kwargs):
 # ============================================================================
 
 @api_bp.get('/ips', tags=[tag_ips])
+@login_required
 def get_ips():
-    """Get all IPs with optional filtering"""
+    """Get all IPs with optional filtering and pagination"""
     subnet_id = request.args.get('subnet_id')
-    search = request.args.get('search', '')
+    search = request.args.get('search', '').strip()[:MAX_SEARCH_LENGTH]
     status = request.args.get('status')
     device_type = request.args.get('device_type')
-    
-    query = IP.query
-    
+
+    # Pagination parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', DEFAULT_PAGE_SIZE, type=int), MAX_PAGE_SIZE)
+
+    # Eager load subnet for each IP
+    query = IP.query.options(joinedload(IP.subnet))
+
     if subnet_id:
-        query = query.filter_by(subnet_id=subnet_id)
-    
+        try:
+            query = query.filter_by(subnet_id=int(subnet_id))
+        except ValueError:
+            pass
+
     if search:
         query = query.filter(
             (IP.address.ilike(f'%{search}%')) |
@@ -299,31 +349,44 @@ def get_ips():
             (IP.mac_address.ilike(f'%{search}%')) |
             (IP.owner.ilike(f'%{search}%'))
         )
-    
+
     if status:
         query = query.filter_by(status=status)
-    
+
     if device_type:
         query = query.filter_by(device_type=device_type)
-    
-    ips = query.all()
-    
+
+    # Get total count
+    total = query.count()
+
+    # Apply pagination
+    ips = query.offset((page - 1) * per_page).limit(per_page).all()
+
     # Sort IPs numerically
     ips_data = [ip.to_dict() for ip in ips]
     ips_data.sort(key=lambda x: ip_sort_key(x['address']))
-    
-    return jsonify(ips_data)
+
+    return jsonify({
+        'items': ips_data,
+        'total': total,
+        'page': page,
+        'per_page': per_page,
+        'pages': (total + per_page - 1) // per_page
+    })
 
 
 @api_bp.get('/ips/<int:id>', tags=[tag_ips])
+@login_required
 def get_ip(**kwargs):
     """Get a specific IP"""
     id = request.view_args['id']
-    ip = IP.query.get_or_404(id)
+    ip = IP.query.options(joinedload(IP.subnet)).get_or_404(id)
     return jsonify(ip.to_dict())
 
 
 @api_bp.post('/ips', tags=[tag_ips])
+@login_required
+@limiter.limit("60 per minute")
 def create_ip():
     """Create a new IP entry"""
     try:
@@ -707,6 +770,8 @@ def sync_connector(**kwargs):
 
 
 @api_bp.put('/ips/<int:id>', tags=[tag_ips])
+@login_required
+@limiter.limit("60 per minute")
 def update_ip(**kwargs):
     """Update an IP entry"""
     id = request.view_args['id']
@@ -771,6 +836,8 @@ def update_ip(**kwargs):
 
 
 @api_bp.delete('/ips/<int:id>', tags=[tag_ips])
+@login_required
+@limiter.limit("30 per minute")
 def delete_ip(**kwargs):
     """Delete an IP entry"""
     id = request.view_args['id']
@@ -789,6 +856,8 @@ def delete_ip(**kwargs):
 # ============================================================================
 
 @api_bp.post('/ips/bulk', tags=[tag_ips])
+@login_required
+@limiter.limit("10 per minute")
 def bulk_create_ips():
     """Create multiple IPs at once"""
     try:
@@ -867,6 +936,7 @@ def bulk_create_ips():
 # ============================================================================
 
 @api_bp.get('/export', tags=[tag_import_export])
+@login_required
 def export_data():
     """Export all data as JSON"""
     subnets = Subnet.query.all()
@@ -881,6 +951,8 @@ def export_data():
 
 
 @api_bp.post('/import', tags=[tag_import_export])
+@login_required
+@limiter.limit("5 per minute")
 def import_data():
     """Import data from JSON"""
     try:
@@ -979,15 +1051,17 @@ def import_data():
 # ============================================================================
 
 @api_bp.get('/lookup/ip/<ip_address>', tags=[tag_lookup])
-def lookup_ip(ip_address):
+@login_required
+def lookup_ip(**kwargs):
     """Find which subnet an IP belongs to"""
+    ip_address = request.view_args['ip_address']
     try:
         ip_obj = ipaddress.ip_address(ip_address)
     except ValueError:
         return jsonify({'error': 'Invalid IP address'}), 400
-    
+
     subnets = Subnet.query.all()
-    
+
     for subnet in subnets:
         if subnet.contains_ip(ip_address):
             # Check if IP is registered
@@ -997,7 +1071,7 @@ def lookup_ip(ip_address):
                 'subnet': subnet.to_dict(),
                 'registered': ip.to_dict() if ip else None
             })
-    
+
     return jsonify({
         'ip': ip_address,
         'subnet': None,
@@ -1007,6 +1081,7 @@ def lookup_ip(ip_address):
 
 
 @api_bp.get('/environments', tags=[tag_metadata])
+@login_required
 def get_environments():
     """Get list of all environments"""
     envs = db.session.query(Subnet.environment).distinct().all()
@@ -1014,6 +1089,7 @@ def get_environments():
 
 
 @api_bp.get('/device-types', tags=[tag_metadata])
+@login_required
 def get_device_types():
     """Get list of all device types"""
     types = db.session.query(IP.device_type).distinct().all()
@@ -1045,6 +1121,7 @@ def serve_css(filename):
 # ============================================================================
 
 @api_bp.get('/scanner/status', tags=[tag_scanner])
+@login_required
 def scanner_status():
     """Check if network scanner is available"""
     return jsonify({
@@ -1054,6 +1131,8 @@ def scanner_status():
 
 
 @api_bp.post('/scanner/scan-subnet/<int:subnet_id>', tags=[tag_scanner])
+@login_required
+@limiter.limit("5 per minute")
 def scan_subnet(**kwargs):
     """Scan a subnet for live hosts"""
     subnet_id = request.view_args['subnet_id']
@@ -1097,6 +1176,8 @@ def scan_subnet(**kwargs):
 
 
 @api_bp.post('/scanner/scan-subnet/<int:subnet_id>/start', tags=[tag_scanner])
+@login_required
+@limiter.limit("5 per minute")
 def scan_subnet_start(**kwargs):
     """Start an asynchronous subnet scan and return a job id"""
     subnet_id = request.view_args['subnet_id']
@@ -1125,6 +1206,7 @@ def scan_subnet_start(**kwargs):
 
 
 @api_bp.get('/scanner/scan-jobs/<string:job_id>', tags=[tag_scanner])
+@login_required
 def scan_job_status(**kwargs):
     """Get the current status, logs, and partial results for a scan job"""
     job_id = request.view_args['job_id']
@@ -1147,6 +1229,8 @@ def scan_job_status(**kwargs):
 
 
 @api_bp.post('/scanner/bulk-import', tags=[tag_scanner])
+@login_required
+@limiter.limit("10 per minute")
 def bulk_import_ips():
     """
     Bulk import recommended IPs from scan results
@@ -1234,6 +1318,8 @@ def bulk_import_ips():
 
 
 @api_bp.post('/scanner/verify/<int:subnet_id>', tags=[tag_scanner])
+@login_required
+@limiter.limit("5 per minute")
 def verify_subnet(**kwargs):
     """Verify status of all IPs in a subnet"""
     subnet_id = request.view_args['subnet_id']
@@ -1270,6 +1356,8 @@ def verify_subnet(**kwargs):
 
 
 @api_bp.post('/scanner/verify-ip', tags=[tag_scanner])
+@login_required
+@limiter.limit("30 per minute")
 def verify_ip():
     """
     Verify status of a single IP

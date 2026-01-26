@@ -14,130 +14,395 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
-                    }
+                        primary: { 50: '#f0f9ff', 100: '#e0f2fe', 200: '#bae6fd', 300: '#7dd3fc', 400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1', 800: '#075985', 900: '#0c4a6e' },
+                        accent: { 50: '#faf5ff', 100: '#f3e8ff', 200: '#e9d5ff', 300: '#d8b4fe', 400: '#c084fc', 500: '#a855f7', 600: '#9333ea', 700: '#7e22ce', 800: '#6b21a8', 900: '#581c87' },
+                        surface: { 50: '#fafafa', 100: '#f4f4f5', 200: '#e4e4e7', 300: '#d4d4d8', 400: '#a1a1aa', 500: '#71717a', 600: '#52525b', 700: '#3f3f46', 800: '#27272a', 900: '#18181b' },
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'SF Mono', 'Monaco', 'monospace'],
+                    },
+                    boxShadow: {
+                        'premium': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
+                        'premium-lg': '0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05)',
+                        'premium-xl': '0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04)',
+                        'glow': '0 0 20px rgba(14, 165, 233, 0.15)',
+                        'glow-accent': '0 0 20px rgba(168, 85, 247, 0.15)',
+                    },
                 }
             }
         }
     </script>
+    <!-- Premium fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
+        /* ===== Base & Reset ===== */
         [hidden] { display: none !important; }
-        .fade-in { animation: fadeIn 0.2s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .toast { animation: slideIn 0.3s ease-out, fadeOut 0.3s ease-in 2.7s; }
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
-        
-        .progress-bar { transition: width 0.3s ease-in-out; }
-        
-        .status-available { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
-        .status-in-use { background-color: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
-        .status-reserved { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-        .status-blocked { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
-        .status-dhcp { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
-        .status-deprecated { background-color: #f3f4f6; color: #1f2937; border: 1px solid #e5e7eb; }
-        
-        .env-prod { border-left: 4px solid #ef4444; }
-        .env-staging { border-left: 4px solid #f59e0b; }
-        .env-dev { border-left: 4px solid #10b981; }
-        .env-test { border-left: 4px solid #2563eb; }
-        
-        .subnet-card { background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06); border: 1px solid #e5e7eb; transition: all 0.2s ease; cursor: pointer; }
-        .subnet-card:hover { box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08); border-color: #bfdbfe; }
-        
-        .modal-overlay { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.55); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 50; }
-        
-        .input-field { width: 100%; padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 10px; outline: none; transition: all 0.15s ease; }
-        .input-field:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
-        
-        .btn-primary { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; background: #2563eb; color: #fff; border: none; border-radius: 10px; font-weight: 600; transition: background 0.15s ease, transform 0.1s ease; }
-        .btn-primary:hover { background: #1d4ed8; }
-        .btn-primary:active { background: #1e40af; transform: translateY(1px); }
-        
-        .btn-secondary { padding: 10px 14px; background: #fff; color: #374151; border: 1px solid #d1d5db; border-radius: 10px; font-weight: 600; transition: background 0.15s ease, transform 0.1s ease; }
-        .btn-secondary:hover { background: #f3f4f6; }
-        .btn-secondary:active { background: #e5e7eb; transform: translateY(1px); }
-        
-        .btn-danger { padding: 10px 14px; background: #dc2626; color: #fff; border: none; border-radius: 10px; font-weight: 600; transition: background 0.15s ease, transform 0.1s ease; }
-        .btn-danger:hover { background: #b91c1c; }
-        .btn-danger:active { background: #991b1b; transform: translateY(1px); }
-        
-        .btn-success { padding: 10px 14px; background: #059669; color: #fff; border: none; border-radius: 10px; font-weight: 600; transition: background 0.15s ease, transform 0.1s ease; }
-        .btn-success:hover { background: #047857; }
-        .btn-success:active { background: #065f46; transform: translateY(1px); }
-        
+        * { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+
+        /* ===== Premium Animations ===== */
+        .fade-in { animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .slide-up { animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .scale-in { animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+        .toast { animation: toastSlide 0.4s cubic-bezier(0.4, 0, 0.2, 1), toastFade 0.3s ease-in 2.7s forwards; }
+        @keyframes toastSlide { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes toastFade { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(50px); } }
+
+        .progress-bar { transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        .shimmer { background: linear-gradient(90deg, #f4f4f5 25%, #e4e4e7 50%, #f4f4f5 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* Subtle float animation for cards on hover */
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+
+        /* ===== Premium Status Badges ===== */
+        .status-available {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            color: #047857;
+            border: 1px solid #a7f3d0;
+            box-shadow: 0 1px 2px rgba(5, 150, 105, 0.08);
+        }
+        .status-in-use {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            color: #0369a1;
+            border: 1px solid #7dd3fc;
+            box-shadow: 0 1px 2px rgba(14, 165, 233, 0.08);
+        }
+        .status-reserved {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            color: #b45309;
+            border: 1px solid #fcd34d;
+            box-shadow: 0 1px 2px rgba(245, 158, 11, 0.08);
+        }
+        .status-blocked {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            color: #b91c1c;
+            border: 1px solid #fca5a5;
+            box-shadow: 0 1px 2px rgba(239, 68, 68, 0.08);
+        }
+        .status-dhcp {
+            background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+            color: #7e22ce;
+            border: 1px solid #d8b4fe;
+            box-shadow: 0 1px 2px rgba(168, 85, 247, 0.08);
+        }
+        .status-deprecated {
+            background: linear-gradient(135deg, #fafafa 0%, #f4f4f5 100%);
+            color: #52525b;
+            border: 1px solid #d4d4d8;
+            box-shadow: 0 1px 2px rgba(113, 113, 122, 0.08);
+        }
+
+        /* ===== Environment Indicators ===== */
+        .env-prod { border-left: 4px solid #ef4444; background: linear-gradient(90deg, rgba(239, 68, 68, 0.03) 0%, transparent 30%); }
+        .env-staging { border-left: 4px solid #f59e0b; background: linear-gradient(90deg, rgba(245, 158, 11, 0.03) 0%, transparent 30%); }
+        .env-dev { border-left: 4px solid #10b981; background: linear-gradient(90deg, rgba(16, 185, 129, 0.03) 0%, transparent 30%); }
+        .env-test { border-left: 4px solid #0ea5e9; background: linear-gradient(90deg, rgba(14, 165, 233, 0.03) 0%, transparent 30%); }
+
+        /* ===== Premium Card Styling ===== */
+        .subnet-card {
+            background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .subnet-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #0ea5e9, #a855f7);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .subnet-card:hover {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04), 0 10px 24px rgba(0, 0, 0, 0.06);
+            border-color: rgba(14, 165, 233, 0.2);
+            transform: translateY(-2px);
+        }
+        .subnet-card:hover::before {
+            opacity: 1;
+        }
+
+        /* ===== Premium Modal Styling ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(9, 9, 11, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+
+        /* ===== Premium Form Elements ===== */
+        .input-field {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1.5px solid #e4e4e7;
+            border-radius: 12px;
+            outline: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            background: #ffffff;
+            font-size: 14px;
+            color: #18181b;
+        }
+        .input-field::placeholder { color: #a1a1aa; }
+        .input-field:hover { border-color: #d4d4d8; }
+        .input-field:focus {
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1), 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* ===== Premium Buttons ===== */
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 11px 18px;
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 3px rgba(14, 165, 233, 0.3), 0 2px 8px rgba(14, 165, 233, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            box-shadow: 0 2px 4px rgba(14, 165, 233, 0.3), 0 4px 12px rgba(14, 165, 233, 0.2);
+            transform: translateY(-1px);
+        }
+        .btn-primary:hover::before { left: 100%; }
+        .btn-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(14, 165, 233, 0.3);
+        }
+
+        .btn-secondary {
+            padding: 11px 18px;
+            background: #ffffff;
+            color: #3f3f46;
+            border: 1.5px solid #e4e4e7;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+        .btn-secondary:hover {
+            background: #fafafa;
+            border-color: #d4d4d8;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+        }
+        .btn-secondary:active {
+            background: #f4f4f5;
+            transform: translateY(1px);
+        }
+
+        .btn-danger {
+            padding: 11px 18px;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 3px rgba(239, 68, 68, 0.3), 0 2px 8px rgba(239, 68, 68, 0.15);
+        }
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3), 0 4px 12px rgba(239, 68, 68, 0.2);
+            transform: translateY(-1px);
+        }
+        .btn-danger:active { transform: translateY(0); }
+
+        .btn-success {
+            padding: 11px 18px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3), 0 2px 8px rgba(16, 185, 129, 0.15);
+        }
+        .btn-success:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3), 0 4px 12px rgba(16, 185, 129, 0.2);
+            transform: translateY(-1px);
+        }
+        .btn-success:active { transform: translateY(0); }
+
+        /* ===== Layout ===== */
         .sidebar { width: 280px; }
         .main-content { width: calc(100% - 280px); }
-        
+
         @media (max-width: 1024px) {
-            .sidebar { width: 100%; position: fixed; left: -100%; transition: left 0.3s; z-index: 40; }
+            .sidebar { width: 100%; position: fixed; left: -100%; transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 40; }
             .sidebar.open { left: 0; }
             .main-content { width: 100%; }
         }
-        
-        .tab-active { color: #2563eb; border-bottom: 2px solid #2563eb; }
-        
-        /* Custom scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* ===== Premium Tabs ===== */
+        .tab-active {
+            color: #0ea5e9;
+            border-bottom: 2px solid #0ea5e9;
+            background: linear-gradient(180deg, transparent 0%, rgba(14, 165, 233, 0.05) 100%);
+        }
+
+        /* ===== Premium Scrollbar ===== */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 100px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+
+        /* ===== Premium Glass Effects ===== */
+        .glass {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .glass-dark {
+            background: rgba(24, 24, 27, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        /* ===== Premium Stat Cards ===== */
+        .stat-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 14px;
+            padding: 16px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .stat-card:hover { transform: translateY(-2px); }
+
+        /* ===== Premium Table Styling ===== */
+        .premium-table thead {
+            background: linear-gradient(180deg, #fafafa 0%, #f4f4f5 100%);
+        }
+        .premium-table tbody tr {
+            transition: all 0.15s ease;
+        }
+        .premium-table tbody tr:hover {
+            background: linear-gradient(90deg, rgba(14, 165, 233, 0.03) 0%, transparent 50%);
+        }
+
+        /* ===== Focus visible styles ===== */
+        button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+
+        /* ===== Smooth text rendering ===== */
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-surface-50 min-h-screen">
     <!-- Toast Container -->
-    <div id="toastContainer" class="fixed bottom-4 right-4 z-[100] space-y-2"></div>
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-[100] space-y-3"></div>
 
     <!-- Header -->
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
+    <header class="bg-white/80 backdrop-blur-xl border-b border-surface-200/60 sticky top-0 z-30 shadow-sm">
         <div class="w-full px-0">
             <div class="flex justify-between items-center h-16">
                 <div class="flex items-center gap-4 pl-4 sm:pl-6">
-                    <button onclick="toggleSidebar()" class="lg:hidden p-2 text-gray-600 hover:text-gray-900">
-                        <i class="fas fa-bars text-xl"></i>
+                    <button onclick="toggleSidebar()" class="lg:hidden p-2.5 text-surface-500 hover:text-surface-900 hover:bg-surface-100 rounded-xl transition-all">
+                        <i class="fas fa-bars text-lg"></i>
                     </button>
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center">
+                        <div class="w-11 h-11 bg-gradient-to-br from-primary-500 via-primary-600 to-accent-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/25 ring-1 ring-white/20">
                             <i class="fas fa-network-wired text-white text-lg"></i>
                         </div>
                         <div>
-                            <h1 class="text-xl font-bold text-gray-900">NetDoc IPAM</h1>
-                            <p class="text-xs text-gray-500">IP Address Management System</p>
+                            <h1 class="text-lg font-bold text-surface-900 tracking-tight">NetDoc IPAM</h1>
+                            <p class="text-[11px] text-surface-400 font-medium tracking-wide uppercase">IP Address Management</p>
                         </div>
                     </div>
                 </div>
-                
-                <div class="flex items-center gap-3">
+
+                <div class="flex items-center gap-2 pr-4 sm:pr-6">
                     <div class="relative hidden sm:block">
-                        <input 
-                            type="text" 
-                            id="globalSearch" 
-                            placeholder="Search IPs, subnets, hosts..." 
-                            class="w-64 md:w-80 pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none text-sm"
+                        <input
+                            type="text"
+                            id="globalSearch"
+                            placeholder="Search IPs, subnets, hosts..."
+                            class="w-64 md:w-80 pl-11 pr-4 py-2.5 bg-surface-50 border border-surface-200 rounded-xl focus:border-primary-400 focus:ring-4 focus:ring-primary-500/10 focus:bg-white outline-none text-sm transition-all"
                             onkeyup="handleGlobalSearch(this.value)"
                         >
-                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-surface-400 text-sm"></i>
                     </div>
-                    
-                    <a href="/openapi/swagger" target="_blank" class="p-2.5 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors" title="API Documentation">
-                        <i class="fas fa-book"></i>
-                    </a>
-                    
-                    <button onclick="showSettingsModal()" class="relative p-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors" title="Settings">
-                        <i class="fas fa-cog"></i>
-                        <span id="headerUpdateBadge" class="hidden absolute -top-1 -right-1 w-3 h-3 rounded-full bg-amber-500"></span>
-                    </button>
-                    
-                    <button onclick="handleLogout()" class="p-2.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Logout">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </button>
-                    
+
+                    <div class="flex items-center gap-1 ml-2">
+                        <a href="/openapi/swagger" target="_blank" class="p-2.5 text-surface-500 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all" title="API Documentation">
+                            <i class="fas fa-book text-sm"></i>
+                        </a>
+
+                        <button onclick="showSettingsModal()" class="relative p-2.5 text-surface-500 hover:text-surface-900 hover:bg-surface-100 rounded-xl transition-all" title="Settings">
+                            <i class="fas fa-cog text-sm"></i>
+                            <span id="headerUpdateBadge" class="hidden absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 ring-2 ring-white"></span>
+                        </button>
+
+                        <button onclick="handleLogout()" class="p-2.5 text-surface-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Logout">
+                            <i class="fas fa-sign-out-alt text-sm"></i>
+                        </button>
+                    </div>
+
+                    <div class="w-px h-8 bg-surface-200 mx-2 hidden sm:block"></div>
+
                     <button onclick="showSubnetModal()" class="btn-primary hidden sm:flex items-center gap-2">
-                        <i class="fas fa-plus"></i>
+                        <i class="fas fa-plus text-xs"></i>
                         <span>New Subnet</span>
                     </button>
-                    <button onclick="showSubnetModal()" class="btn-primary sm:hidden p-2.5">
+                    <button onclick="showSubnetModal()" class="btn-primary sm:hidden !p-2.5">
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>
@@ -147,40 +412,55 @@
 
     <div class="flex px-0">
         <!-- Sidebar -->
-        <aside id="sidebar" class="sidebar bg-white border-r border-gray-200 min-h-[calc(100vh-64px)] flex flex-col">
+        <aside id="sidebar" class="sidebar bg-white/80 backdrop-blur-xl border-r border-surface-200/60 min-h-[calc(100vh-64px)] flex flex-col">
             <!-- Dashboard Stats -->
-            <div class="p-4 border-b border-gray-100">
-                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Overview</h3>
+            <div class="p-5 border-b border-surface-100">
+                <h3 class="text-[11px] font-semibold text-surface-400 uppercase tracking-widest mb-4">Overview</h3>
                 <div class="space-y-3">
-                    <div class="bg-gradient-to-r from-primary-50 to-primary-100 rounded-lg p-3">
+                    <div class="stat-card bg-gradient-to-br from-primary-50 via-primary-50 to-primary-100/80 border border-primary-100">
                         <div class="flex justify-between items-center">
-                            <span class="text-sm text-primary-700">Total Subnets</span>
-                            <span id="statTotalSubnets" class="text-2xl font-bold text-primary-700">0</span>
+                            <div>
+                                <span class="text-xs font-medium text-primary-600/80">Total Subnets</span>
+                                <p id="statTotalSubnets" class="text-2xl font-bold text-primary-700 mt-0.5">0</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-primary-500/10 flex items-center justify-center">
+                                <i class="fas fa-sitemap text-primary-500"></i>
+                            </div>
                         </div>
                     </div>
-                    <div class="bg-gradient-to-r from-emerald-50 to-emerald-100 rounded-lg p-3">
+                    <div class="stat-card bg-gradient-to-br from-emerald-50 via-emerald-50 to-emerald-100/80 border border-emerald-100">
                         <div class="flex justify-between items-center">
-                            <span class="text-sm text-emerald-700">Documented IPs</span>
-                            <span id="statTotalIPs" class="text-2xl font-bold text-emerald-700">0</span>
+                            <div>
+                                <span class="text-xs font-medium text-emerald-600/80">Documented IPs</span>
+                                <p id="statTotalIPs" class="text-2xl font-bold text-emerald-700 mt-0.5">0</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                                <i class="fas fa-ethernet text-emerald-500"></i>
+                            </div>
                         </div>
                     </div>
-                    <div class="bg-gradient-to-r from-amber-50 to-amber-100 rounded-lg p-3">
+                    <div class="stat-card bg-gradient-to-br from-amber-50 via-amber-50 to-amber-100/80 border border-amber-100">
                         <div class="flex justify-between items-center">
-                            <span class="text-sm text-amber-700">Utilization</span>
-                            <span id="statUtilization" class="text-2xl font-bold text-amber-700">0%</span>
+                            <div>
+                                <span class="text-xs font-medium text-amber-600/80">Utilization</span>
+                                <p id="statUtilization" class="text-2xl font-bold text-amber-700 mt-0.5">0%</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                                <i class="fas fa-chart-pie text-amber-500"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            
+
             <!-- Filters -->
-            <div class="p-4 border-b border-gray-100 flex-1 overflow-y-auto">
-                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Filters</h3>
-                
+            <div class="p-5 border-b border-surface-100 flex-1 overflow-y-auto">
+                <h3 class="text-[11px] font-semibold text-surface-400 uppercase tracking-widest mb-4">Filters</h3>
+
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Environment</label>
-                        <select id="filterEnvironment" onchange="applyFilters()" class="input-field text-sm">
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">Environment</label>
+                        <select id="filterEnvironment" onchange="applyFilters()" class="input-field text-sm !py-2.5">
                             <option value="">All Environments</option>
                             <option value="prod">Production</option>
                             <option value="staging">Staging</option>
@@ -188,39 +468,43 @@
                             <option value="test">Test</option>
                         </select>
                     </div>
-                    
+
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">VLAN</label>
-                        <input type="number" id="filterVLAN" placeholder="Filter by VLAN" onchange="applyFilters()" class="input-field text-sm">
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">VLAN</label>
+                        <input type="number" id="filterVLAN" placeholder="Filter by VLAN" onchange="applyFilters()" class="input-field text-sm !py-2.5">
                     </div>
-                    
+
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Sort By</label>
-                        <select id="sortBy" onchange="applyFilters()" class="input-field text-sm">
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">Sort By</label>
+                        <select id="sortBy" onchange="applyFilters()" class="input-field text-sm !py-2.5">
                             <option value="cidr">CIDR (Network)</option>
                             <option value="name">Name</option>
                             <option value="vlan">VLAN</option>
                             <option value="created">Date Created</option>
                         </select>
                     </div>
-                    
-                    <button onclick="clearFilters()" class="w-full btn-secondary text-sm">
-                        <i class="fas fa-times mr-2"></i>Clear Filters
+
+                    <button onclick="clearFilters()" class="w-full btn-secondary text-sm !py-2.5">
+                        <i class="fas fa-times mr-2 text-surface-400"></i>Clear Filters
                     </button>
                 </div>
             </div>
-            
+
             <!-- Quick Actions -->
-            <div class="p-4 border-t border-gray-100 bg-gray-50">
-                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Quick Actions</h3>
+            <div class="p-5 bg-gradient-to-b from-surface-50/50 to-surface-100/50">
+                <h3 class="text-[11px] font-semibold text-surface-400 uppercase tracking-widest mb-4">Quick Actions</h3>
                 <div class="space-y-2">
-                    <button onclick="showIPLookupModal()" class="w-full btn-secondary text-sm text-left flex items-center gap-2">
-                        <i class="fas fa-search w-5"></i>
-                        <span>IP Lookup</span>
+                    <button onclick="showIPLookupModal()" class="w-full btn-secondary text-sm text-left flex items-center gap-3 !py-3 group">
+                        <div class="w-8 h-8 rounded-lg bg-accent-50 flex items-center justify-center group-hover:bg-accent-100 transition-colors">
+                            <i class="fas fa-search text-accent-500 text-xs"></i>
+                        </div>
+                        <span class="font-medium">IP Lookup</span>
                     </button>
-                    <a href="/api/export" download="ipam-export.json" class="w-full btn-secondary text-sm flex items-center gap-2">
-                        <i class="fas fa-file-export w-5"></i>
-                        <span>Quick Export</span>
+                    <a href="/api/export" download="ipam-export.json" class="w-full btn-secondary text-sm flex items-center gap-3 !py-3 group">
+                        <div class="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center group-hover:bg-primary-100 transition-colors">
+                            <i class="fas fa-file-export text-primary-500 text-xs"></i>
+                        </div>
+                        <span class="font-medium">Quick Export</span>
                     </a>
                 </div>
             </div>
@@ -229,47 +513,49 @@
         <!-- Main Content -->
         <main class="main-content p-6 w-full">
             <!-- Mobile Search -->
-            <div class="sm:hidden mb-4">
+            <div class="sm:hidden mb-5">
                 <div class="relative">
-                    <input 
-                        type="text" 
-                        placeholder="Search..." 
-                        class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none"
+                    <input
+                        type="text"
+                        placeholder="Search..."
+                        class="w-full pl-11 pr-4 py-3 bg-white border border-surface-200 rounded-xl focus:border-primary-400 focus:ring-4 focus:ring-primary-500/10 outline-none text-sm"
                         onkeyup="handleGlobalSearch(this.value)"
                     >
-                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-surface-400 text-sm"></i>
                 </div>
             </div>
 
             <!-- Tabs -->
-            <div class="flex gap-6 border-b border-gray-200 mb-6">
-                <button onclick="switchTab('subnets')" id="tabSubnets" class="pb-3 text-sm font-medium tab-active">
-                    <i class="fas fa-sitemap mr-2"></i>Subnets
+            <div class="flex gap-1 bg-surface-100/50 p-1.5 rounded-xl mb-6 w-fit">
+                <button onclick="switchTab('subnets')" id="tabSubnets" class="px-5 py-2.5 text-sm font-semibold rounded-lg tab-active transition-all">
+                    <i class="fas fa-sitemap mr-2 text-xs"></i>Subnets
                 </button>
-                <button onclick="switchTab('ips')" id="tabIPs" class="pb-3 text-sm font-medium text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-ethernet mr-2"></i>All IPs
+                <button onclick="switchTab('ips')" id="tabIPs" class="px-5 py-2.5 text-sm font-semibold text-surface-500 hover:text-surface-700 hover:bg-white/50 rounded-lg transition-all">
+                    <i class="fas fa-ethernet mr-2 text-xs"></i>All IPs
                 </button>
-                <button onclick="switchTab('connectors')" id="tabConnectors" class="pb-3 text-sm font-medium text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-plug mr-2"></i>Connectors
+                <button onclick="switchTab('connectors')" id="tabConnectors" class="px-5 py-2.5 text-sm font-semibold text-surface-500 hover:text-surface-700 hover:bg-white/50 rounded-lg transition-all">
+                    <i class="fas fa-plug mr-2 text-xs"></i>Connectors
                 </button>
             </div>
 
             <!-- Subnets View -->
-            <div id="subnetsView">
-                <div id="subnetsContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-                    <div class="col-span-full text-center py-12 text-gray-500">
-                        <i class="fas fa-spinner fa-spin text-2xl mb-3"></i>
-                        <p>Loading subnets...</p>
+            <div id="subnetsView" class="slide-up">
+                <div id="subnetsContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
+                    <div class="col-span-full text-center py-16 text-surface-400">
+                        <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-surface-100 flex items-center justify-center">
+                            <i class="fas fa-spinner fa-spin text-xl text-primary-500"></i>
+                        </div>
+                        <p class="font-medium">Loading subnets...</p>
                     </div>
                 </div>
             </div>
 
             <!-- All IPs View -->
-            <div id="ipsView" class="hidden">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="p-4 border-b border-gray-100 flex flex-wrap gap-3 items-center justify-between">
+            <div id="ipsView" class="hidden slide-up">
+                <div class="bg-white rounded-2xl shadow-premium border border-surface-200/60 overflow-hidden">
+                    <div class="p-5 border-b border-surface-100 flex flex-wrap gap-3 items-center justify-between">
                         <div class="flex gap-2">
-                            <select id="ipFilterStatus" onchange="loadAllIPs()" class="input-field text-sm py-2">
+                            <select id="ipFilterStatus" onchange="loadAllIPs()" class="input-field text-sm !py-2.5 !w-auto min-w-[160px]">
                                 <option value="">All Statuses</option>
                                 <option value="available">Available</option>
                                 <option value="in-use">In Use</option>
@@ -279,22 +565,22 @@
                                 <option value="deprecated">Deprecated</option>
                             </select>
                         </div>
-                        <span id="ipCount" class="text-sm text-gray-500"></span>
+                        <span id="ipCount" class="text-sm text-surface-500 font-medium"></span>
                     </div>
                     <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-gray-50">
+                        <table class="w-full premium-table">
+                            <thead class="bg-gradient-to-b from-surface-50 to-surface-100/50 border-b border-surface-200/50">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">IP Address</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Hostname</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Subnet</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Device</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Owner</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                                    <th class="px-5 py-4 text-left text-[11px] font-bold text-surface-500 uppercase tracking-wider">IP Address</th>
+                                    <th class="px-5 py-4 text-left text-[11px] font-bold text-surface-500 uppercase tracking-wider">Hostname</th>
+                                    <th class="px-5 py-4 text-left text-[11px] font-bold text-surface-500 uppercase tracking-wider">Subnet</th>
+                                    <th class="px-5 py-4 text-left text-[11px] font-bold text-surface-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-5 py-4 text-left text-[11px] font-bold text-surface-500 uppercase tracking-wider">Device</th>
+                                    <th class="px-5 py-4 text-left text-[11px] font-bold text-surface-500 uppercase tracking-wider">Owner</th>
+                                    <th class="px-5 py-4 text-left text-[11px] font-bold text-surface-500 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="ipsTableBody" class="divide-y divide-gray-100">
+                            <tbody id="ipsTableBody" class="divide-y divide-surface-100">
                             </tbody>
                         </table>
                     </div>
@@ -302,59 +588,65 @@
             </div>
 
             <!-- Connectors View -->
-            <div id="connectorsView" class="hidden">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="p-4 border-b border-gray-100 flex flex-wrap gap-3 items-center justify-between">
+            <div id="connectorsView" class="hidden slide-up">
+                <div class="bg-white rounded-2xl shadow-premium border border-surface-200/60 overflow-hidden">
+                    <div class="p-5 border-b border-surface-100 flex flex-wrap gap-3 items-center justify-between">
                         <div class="flex gap-2 items-center">
-                            <span class="text-sm text-gray-700">Manage external system connectors</span>
+                            <div class="w-9 h-9 rounded-xl bg-accent-50 flex items-center justify-center mr-1">
+                                <i class="fas fa-plug text-accent-500 text-sm"></i>
+                            </div>
+                            <span class="text-sm font-medium text-surface-600">Manage external system connectors</span>
                         </div>
                         <div class="flex gap-2">
                             <button onclick="showAddConnectorForm()" class="btn-primary text-sm">
-                                <i class="fas fa-plus mr-2"></i>Add Connector
+                                <i class="fas fa-plus mr-2 text-xs"></i>Add Connector
                             </button>
                         </div>
                     </div>
-                    <div class="p-4 space-y-4">
+                    <div class="p-5 space-y-5">
                         <!-- Add Connector Form -->
-                        <div id="addConnectorForm" class="hidden border border-gray-200 rounded-lg p-4">
-                            <h3 class="text-sm font-semibold text-gray-700 mb-3">New Connector</h3>
+                        <div id="addConnectorForm" class="hidden bg-surface-50/50 border border-surface-200 rounded-xl p-5 scale-in">
+                            <h3 class="text-sm font-bold text-surface-800 mb-4 flex items-center gap-2">
+                                <i class="fas fa-plus-circle text-primary-500"></i>
+                                New Connector
+                            </h3>
                             <form id="connectorForm" onsubmit="saveConnector(event)">
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                        <label class="block text-xs font-semibold text-surface-600 mb-2">Name</label>
                                         <input type="text" id="connectorName" required class="input-field" placeholder="e.g., UniFi Main">
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                                        <label class="block text-xs font-semibold text-surface-600 mb-2">Type</label>
                                         <select id="connectorType" class="input-field">
                                             <option value="unifi">UniFi Network</option>
                                         </select>
                                     </div>
-                                    <div class="flex items-end">
-                                        <label class="inline-flex items-center text-sm text-gray-700">
-                                            <input type="checkbox" id="connectorEnabled" class="mr-2" checked>
+                                    <div class="flex items-end pb-1">
+                                        <label class="inline-flex items-center text-sm text-surface-700 cursor-pointer">
+                                            <input type="checkbox" id="connectorEnabled" class="mr-2 w-4 h-4 rounded border-surface-300 text-primary-600 focus:ring-primary-500" checked>
                                             Enabled
                                         </label>
                                     </div>
                                 </div>
-                                <div id="connectorConfigUnifi" class="mt-4">
+                                <div id="connectorConfigUnifi" class="mt-5 pt-5 border-t border-surface-200">
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Base URL</label>
+                                            <label class="block text-xs font-semibold text-surface-600 mb-2">Base URL</label>
                                             <input type="text" id="unifiBaseUrl" required class="input-field" placeholder="https://unifi.example">
                                         </div>
                                         <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Site ID</label>
+                                            <label class="block text-xs font-semibold text-surface-600 mb-2">Site ID</label>
                                             <input type="text" id="unifiSiteId" required class="input-field" placeholder="default">
                                         </div>
                                     </div>
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                         <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">API Key (optional)</label>
+                                            <label class="block text-xs font-semibold text-surface-600 mb-2">API Key (optional)</label>
                                             <input type="password" id="unifiApiKey" class="input-field" placeholder="Bearer token">
                                         </div>
                                         <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">SSL Verification</label>
+                                            <label class="block text-xs font-semibold text-surface-600 mb-2">SSL Verification</label>
                                             <select id="unifiVerifySSL" class="input-field">
                                                 <option value="true">Verify SSL</option>
                                                 <option value="false">Skip Verification</option>
@@ -363,26 +655,26 @@
                                     </div>
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                         <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                                            <label class="block text-xs font-semibold text-surface-600 mb-2">Username</label>
                                             <input type="text" id="unifiUsername" class="input-field" placeholder="Admin username">
                                         </div>
                                         <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                                            <label class="block text-xs font-semibold text-surface-600 mb-2">Password</label>
                                             <input type="password" id="unifiPassword" class="input-field" placeholder="Admin password">
                                         </div>
                                     </div>
                                 </div>
-                                <div class="flex gap-3 justify-end mt-4">
+                                <div class="flex gap-3 justify-end mt-5 pt-5 border-t border-surface-200">
                                     <button type="button" onclick="hideAddConnectorForm()" class="btn-secondary">Cancel</button>
                                     <button type="submit" id="connectorSubmitBtn" class="btn-primary">
-                                        <i class="fas fa-save mr-2"></i>Save Connector
+                                        <i class="fas fa-save mr-2 text-xs"></i>Save Connector
                                     </button>
                                 </div>
                             </form>
                         </div>
 
                         <!-- Connectors List -->
-                        <div id="connectorsList" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+                        <div id="connectorsList" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"></div>
                     </div>
                 </div>
             </div>
@@ -390,40 +682,44 @@
     </div>
 
     <!-- Subnet Modal -->
-    <div id="subnetModal" class="hidden modal-overlay fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden mx-4">
-            <div class="bg-gradient-to-r from-primary-600 to-primary-700 text-white p-5 flex justify-between items-center">
-                <h2 class="text-xl font-semibold" id="modalTitle">New Subnet</h2>
-                <button onclick="closeSubnetModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+    <div id="subnetModal" class="hidden modal-overlay">
+        <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-2xl max-h-[90vh] overflow-hidden mx-4 scale-in border border-surface-200/50">
+            <div class="bg-gradient-to-r from-primary-600 via-primary-600 to-accent-600 text-white p-6 flex justify-between items-center relative overflow-hidden">
+                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="relative">
+                    <h2 class="text-xl font-bold" id="modalTitle">New Subnet</h2>
+                    <p class="text-primary-200 text-sm mt-0.5">Configure your network segment</p>
+                </div>
+                <button onclick="closeSubnetModal()" class="relative p-2 hover:bg-white/10 rounded-xl transition-all">
                     <i class="fas fa-times text-lg"></i>
                 </button>
             </div>
-            
+
             <form id="subnetForm" class="p-6 space-y-5 overflow-y-auto max-h-[calc(90vh-140px)]" onsubmit="saveSubnet(event)">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Subnet Name <span class="text-red-500">*</span></label>
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">Subnet Name <span class="text-red-500">*</span></label>
                         <input type="text" id="subnetName" required class="input-field" placeholder="e.g., Server VLAN">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">CIDR Notation <span class="text-red-500">*</span></label>
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">CIDR Notation <span class="text-red-500">*</span></label>
                         <input type="text" id="subnetCIDR" required class="input-field font-mono" placeholder="e.g., 192.168.1.0/24">
-                        <p class="text-xs text-gray-500 mt-1">Supports IPv4 and IPv6</p>
+                        <p class="text-xs text-surface-400 mt-1.5">Supports IPv4 and IPv6</p>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+                    <label class="block text-xs font-semibold text-surface-600 mb-2">Description</label>
                     <textarea id="subnetDescription" rows="2" class="input-field resize-none" placeholder="What is this subnet used for?"></textarea>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">VLAN ID</label>
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">VLAN ID</label>
                         <input type="number" id="subnetVLAN" min="1" max="4094" class="input-field" placeholder="1-4094">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Environment</label>
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">Environment</label>
                         <select id="subnetEnvironment" class="input-field">
                             <option value="">Select...</option>
                             <option value="prod">Production</option>
@@ -433,35 +729,35 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Location</label>
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">Location</label>
                         <input type="text" id="subnetLocation" class="input-field" placeholder="e.g., DC1, Rack 5">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Gateway IP</label>
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">Gateway IP</label>
                         <input type="text" id="subnetGateway" class="input-field font-mono" placeholder="e.g., 192.168.1.1">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Primary DNS</label>
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">Primary DNS</label>
                         <input type="text" id="subnetDNS1" class="input-field font-mono" placeholder="e.g., 8.8.8.8">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Secondary DNS</label>
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">Secondary DNS</label>
                         <input type="text" id="subnetDNS2" class="input-field font-mono" placeholder="e.g., 8.8.4.4">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Tags</label>
+                    <label class="block text-xs font-semibold text-surface-600 mb-2">Tags</label>
                     <input type="text" id="subnetTags" class="input-field" placeholder="e.g., internal, servers, dmz (comma-separated)">
                 </div>
 
-                <div class="flex gap-3 justify-end pt-4 border-t border-gray-100">
+                <div class="flex gap-3 justify-end pt-5 border-t border-surface-100">
                     <button type="button" onclick="closeSubnetModal()" class="btn-secondary">Cancel</button>
                     <button type="submit" class="btn-primary">
-                        <i class="fas fa-save mr-2"></i>Save Subnet
+                        <i class="fas fa-save mr-2 text-xs"></i>Save Subnet
                     </button>
                 </div>
             </form>
@@ -469,32 +765,36 @@
     </div>
 
     <!-- IP Modal -->
-    <div id="ipModal" class="hidden modal-overlay fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden mx-4">
-            <div class="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white p-5 flex justify-between items-center">
-                <h2 class="text-xl font-semibold" id="ipModalTitle">New IP Address</h2>
-                <button onclick="closeIPModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+    <div id="ipModal" class="hidden modal-overlay">
+        <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-2xl max-h-[90vh] overflow-hidden mx-4 scale-in border border-surface-200/50">
+            <div class="bg-gradient-to-r from-emerald-600 via-emerald-600 to-teal-600 text-white p-6 flex justify-between items-center relative overflow-hidden">
+                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="relative">
+                    <h2 class="text-xl font-bold" id="ipModalTitle">New IP Address</h2>
+                    <p class="text-emerald-200 text-sm mt-0.5">Document a network address</p>
+                </div>
+                <button onclick="closeIPModal()" class="relative p-2 hover:bg-white/10 rounded-xl transition-all">
                     <i class="fas fa-times text-lg"></i>
                 </button>
             </div>
-            
+
             <form id="ipForm" class="p-6 space-y-5 overflow-y-auto max-h-[calc(90vh-140px)]" onsubmit="saveIP(event)">
                 <!-- Next Available IP Helper -->
-                <div id="nextAvailableIP" class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex justify-between items-center">
+                <div id="nextAvailableIP" class="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4 flex justify-between items-center">
                     <div>
-                        <span class="text-sm text-emerald-700">Next available IP:</span>
-                        <span id="nextIPAddress" class="font-mono font-semibold text-emerald-800 ml-2">-</span>
+                        <span class="text-sm font-medium text-emerald-700">Next available IP:</span>
+                        <span id="nextIPAddress" class="font-mono font-bold text-emerald-800 ml-2">-</span>
                     </div>
-                    <button type="button" onclick="useNextAvailableIP()" class="text-sm btn-success py-1.5">Use This</button>
+                    <button type="button" onclick="useNextAvailableIP()" class="text-sm btn-success !py-2">Use This</button>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">IP Address <span class="text-red-500">*</span></label>
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">IP Address <span class="text-red-500">*</span></label>
                         <input type="text" id="ipAddress" required class="input-field font-mono" placeholder="e.g., 192.168.1.100">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">Status</label>
                         <select id="ipStatus" class="input-field">
                             <option value="in-use">In Use</option>
                             <option value="available">Available</option>
@@ -508,27 +808,27 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Hostname</label>
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">Hostname</label>
                         <input type="text" id="ipHostname" class="input-field" placeholder="e.g., server01">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">FQDN</label>
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">FQDN</label>
                         <input type="text" id="ipFQDN" class="input-field" placeholder="e.g., server01.example.com">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+                    <label class="block text-xs font-semibold text-surface-600 mb-2">Description</label>
                     <textarea id="ipDescription" rows="2" class="input-field resize-none" placeholder="What is this IP used for?"></textarea>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">MAC Address</label>
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">MAC Address</label>
                         <input type="text" id="ipMAC" class="input-field font-mono" placeholder="00:11:22:33:44:55">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Device Type</label>
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">Device Type</label>
                         <input type="text" id="ipDeviceType" class="input-field" placeholder="e.g., Server, Router, Switch" list="deviceTypes">
                         <datalist id="deviceTypes">
                             <option value="Server">
@@ -548,35 +848,35 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Manufacturer</label>
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">Manufacturer</label>
                         <input type="text" id="ipManufacturer" class="input-field" placeholder="e.g., Dell, HP, Cisco">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Model</label>
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">Model</label>
                         <input type="text" id="ipModel" class="input-field" placeholder="e.g., PowerEdge R740">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Owner</label>
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">Owner</label>
                         <input type="text" id="ipOwner" class="input-field" placeholder="e.g., IT Team, John Doe">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Department</label>
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">Department</label>
                         <input type="text" id="ipDepartment" class="input-field" placeholder="e.g., Infrastructure">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Notes</label>
+                    <label class="block text-xs font-semibold text-surface-600 mb-2">Notes</label>
                     <textarea id="ipNotes" rows="2" class="input-field resize-none" placeholder="Additional notes..."></textarea>
                 </div>
 
-                <div class="flex gap-3 justify-end pt-4 border-t border-gray-100">
+                <div class="flex gap-3 justify-end pt-5 border-t border-surface-100">
                     <button type="button" onclick="closeIPModal()" class="btn-secondary">Cancel</button>
                     <button type="submit" class="btn-success">
-                        <i class="fas fa-save mr-2"></i>Save IP
+                        <i class="fas fa-save mr-2 text-xs"></i>Save IP
                     </button>
                 </div>
             </form>
@@ -584,84 +884,85 @@
     </div>
 
     <!-- Subnet Detail Modal -->
-    <div id="detailModal" class="hidden modal-overlay fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden mx-4">
-            <div id="detailHeader" class="bg-gradient-to-r from-primary-600 to-primary-700 text-white p-5">
-                <div class="flex justify-between items-start">
+    <div id="detailModal" class="hidden modal-overlay">
+        <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-5xl max-h-[90vh] overflow-hidden mx-4 scale-in border border-surface-200/50">
+            <div id="detailHeader" class="bg-gradient-to-r from-primary-600 via-primary-600 to-accent-600 text-white p-6 relative overflow-hidden">
+                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="flex justify-between items-start relative">
                     <div>
                         <h2 class="text-2xl font-bold" id="detailSubnetName"></h2>
-                        <p class="text-primary-200 font-mono mt-1" id="detailCIDR"></p>
+                        <p class="text-primary-200 font-mono mt-1 text-sm" id="detailCIDR"></p>
                     </div>
-                    <button onclick="closeDetailModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                    <button onclick="closeDetailModal()" class="p-2 hover:bg-white/10 rounded-xl transition-all">
                         <i class="fas fa-times text-lg"></i>
                     </button>
                 </div>
             </div>
-            
+
             <div class="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
                 <!-- Subnet Info Grid -->
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <p class="text-xs text-gray-500 uppercase tracking-wider">VLAN</p>
-                        <p class="text-xl font-bold text-gray-800 mt-1" id="detailVLAN">-</p>
+                    <div class="bg-gradient-to-br from-surface-50 to-surface-100/50 rounded-xl p-4 border border-surface-200/50">
+                        <p class="text-[10px] text-surface-400 uppercase tracking-wider font-bold">VLAN</p>
+                        <p class="text-xl font-bold text-surface-800 mt-1" id="detailVLAN">-</p>
                     </div>
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <p class="text-xs text-gray-500 uppercase tracking-wider">Gateway</p>
-                        <p class="text-lg font-mono font-semibold text-gray-800 mt-1" id="detailGateway">-</p>
+                    <div class="bg-gradient-to-br from-surface-50 to-surface-100/50 rounded-xl p-4 border border-surface-200/50">
+                        <p class="text-[10px] text-surface-400 uppercase tracking-wider font-bold">Gateway</p>
+                        <p class="text-lg font-mono font-semibold text-surface-800 mt-1" id="detailGateway">-</p>
                     </div>
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <p class="text-xs text-gray-500 uppercase tracking-wider">Environment</p>
-                        <p class="text-lg font-semibold text-gray-800 mt-1" id="detailEnvironment">-</p>
+                    <div class="bg-gradient-to-br from-surface-50 to-surface-100/50 rounded-xl p-4 border border-surface-200/50">
+                        <p class="text-[10px] text-surface-400 uppercase tracking-wider font-bold">Environment</p>
+                        <p class="text-lg font-semibold text-surface-800 mt-1" id="detailEnvironment">-</p>
                     </div>
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <p class="text-xs text-gray-500 uppercase tracking-wider">Location</p>
-                        <p class="text-lg font-semibold text-gray-800 mt-1" id="detailLocation">-</p>
+                    <div class="bg-gradient-to-br from-surface-50 to-surface-100/50 rounded-xl p-4 border border-surface-200/50">
+                        <p class="text-[10px] text-surface-400 uppercase tracking-wider font-bold">Location</p>
+                        <p class="text-lg font-semibold text-surface-800 mt-1" id="detailLocation">-</p>
                     </div>
                 </div>
 
                 <!-- Utilization Bar -->
-                <div class="bg-gray-50 rounded-lg p-4 mb-6">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-medium text-gray-700">IP Utilization</span>
-                        <span class="text-sm text-gray-500"><span id="detailUsedIPs">0</span> / <span id="detailTotalIPs">0</span> IPs documented</span>
+                <div class="bg-gradient-to-br from-surface-50 to-surface-100/50 rounded-xl p-5 mb-6 border border-surface-200/50">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-sm font-semibold text-surface-700">IP Utilization</span>
+                        <span class="text-sm text-surface-500"><span id="detailUsedIPs" class="font-semibold text-surface-700">0</span> / <span id="detailTotalIPs">0</span> IPs documented</span>
                     </div>
-                    <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
-                        <div id="utilizationBar" class="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 progress-bar" style="width: 0%"></div>
+                    <div class="h-3 bg-surface-200 rounded-full overflow-hidden">
+                        <div id="utilizationBar" class="h-full bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 progress-bar rounded-full" style="width: 0%"></div>
                     </div>
-                    <p class="text-xs text-gray-500 mt-2"><span id="detailAvailableIPs">0</span> IPs available for allocation</p>
+                    <p class="text-xs text-surface-400 mt-2.5"><span id="detailAvailableIPs" class="font-medium text-surface-500">0</span> IPs available for allocation</p>
                 </div>
 
                 <!-- Description -->
                 <div class="mb-6" id="descriptionSection">
-                    <h4 class="text-sm font-medium text-gray-700 mb-2">Description</h4>
-                    <p class="text-gray-600" id="detailDescription">-</p>
+                    <h4 class="text-xs font-bold text-surface-400 uppercase tracking-wider mb-2">Description</h4>
+                    <p class="text-surface-600" id="detailDescription">-</p>
                 </div>
 
                 <!-- Actions -->
-                <div class="flex flex-wrap gap-3 mb-6 pb-6 border-b border-gray-200">
+                <div class="flex flex-wrap gap-3 mb-6 pb-6 border-b border-surface-200">
                     <button onclick="showIPModal()" class="btn-success">
-                        <i class="fas fa-plus mr-2"></i>Add IP
+                        <i class="fas fa-plus mr-2 text-xs"></i>Add IP
                     </button>
                     <button id="scanSubnetBtn" onclick="showScanModal()" class="btn-secondary">
-                        <i class="fas fa-wifi mr-2"></i>Scan Subnet
+                        <i class="fas fa-wifi mr-2 text-xs"></i>Scan Subnet
                     </button>
                     <button onclick="showBulkAddModal()" class="btn-secondary">
-                        <i class="fas fa-layer-group mr-2"></i>Bulk Add
+                        <i class="fas fa-layer-group mr-2 text-xs"></i>Bulk Add
                     </button>
                     <button onclick="editCurrentSubnet()" class="btn-primary">
-                        <i class="fas fa-edit mr-2"></i>Edit Subnet
+                        <i class="fas fa-edit mr-2 text-xs"></i>Edit Subnet
                     </button>
                     <button onclick="deleteCurrentSubnet()" class="btn-danger">
-                        <i class="fas fa-trash mr-2"></i>Delete
+                        <i class="fas fa-trash mr-2 text-xs"></i>Delete
                     </button>
                 </div>
 
                 <!-- IP List -->
                 <div>
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold text-gray-800">IP Addresses</h3>
+                        <h3 class="text-base font-bold text-surface-800">IP Addresses</h3>
                         <div class="flex gap-2">
-                            <select id="detailIPFilter" onchange="filterDetailIPs()" class="input-field text-sm py-1.5">
+                            <select id="detailIPFilter" onchange="filterDetailIPs()" class="input-field text-sm !py-2 !w-auto min-w-[140px]">
                                 <option value="">All Statuses</option>
                                 <option value="available">Available</option>
                                 <option value="in-use">In Use</option>
@@ -672,7 +973,7 @@
                         </div>
                     </div>
                     <div id="detailIPList" class="space-y-2">
-                        <p class="text-gray-500 text-center py-8">No IPs documented yet</p>
+                        <p class="text-surface-400 text-center py-10 font-medium">No IPs documented yet</p>
                     </div>
                 </div>
             </div>
@@ -680,44 +981,52 @@
     </div>
 
     <!-- IP Lookup Modal -->
-    <div id="lookupModal" class="hidden modal-overlay fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
-            <div class="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-5 flex justify-between items-center">
-                <h2 class="text-xl font-semibold">IP Lookup</h2>
-                <button onclick="closeLookupModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+    <div id="lookupModal" class="hidden modal-overlay">
+        <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-lg mx-4 overflow-hidden scale-in border border-surface-200/50">
+            <div class="bg-gradient-to-r from-accent-600 via-accent-600 to-purple-600 text-white p-6 flex justify-between items-center relative overflow-hidden">
+                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="relative">
+                    <h2 class="text-xl font-bold">IP Lookup</h2>
+                    <p class="text-accent-200 text-sm mt-0.5">Search for an IP address</p>
+                </div>
+                <button onclick="closeLookupModal()" class="relative p-2 hover:bg-white/10 rounded-xl transition-all">
                     <i class="fas fa-times text-lg"></i>
                 </button>
             </div>
             <div class="p-6">
-                <div class="flex gap-2">
+                <div class="flex gap-3">
                     <input type="text" id="lookupIP" class="input-field font-mono flex-1" placeholder="Enter IP address...">
-                    <button onclick="performIPLookup()" class="btn-primary">
+                    <button onclick="performIPLookup()" class="btn-primary !px-5">
                         <i class="fas fa-search"></i>
                     </button>
                 </div>
-                <div id="lookupResult" class="mt-4 hidden">
+                <div id="lookupResult" class="mt-5 hidden">
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Bulk Add Modal -->
-    <div id="bulkModal" class="hidden modal-overlay fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
-            <div class="bg-gradient-to-r from-amber-600 to-amber-700 text-white p-5 flex justify-between items-center">
-                <h2 class="text-xl font-semibold">Bulk Add IPs</h2>
-                <button onclick="closeBulkModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+    <div id="bulkModal" class="hidden modal-overlay">
+        <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-lg mx-4 overflow-hidden scale-in border border-surface-200/50">
+            <div class="bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 text-white p-6 flex justify-between items-center relative overflow-hidden">
+                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="relative">
+                    <h2 class="text-xl font-bold">Bulk Add IPs</h2>
+                    <p class="text-amber-100 text-sm mt-0.5">Import multiple addresses at once</p>
+                </div>
+                <button onclick="closeBulkModal()" class="relative p-2 hover:bg-white/10 rounded-xl transition-all">
                     <i class="fas fa-times text-lg"></i>
                 </button>
             </div>
             <div class="p-6">
-                <p class="text-sm text-gray-600 mb-4">Enter one IP per line. Optionally add hostname and status separated by comma.</p>
-                <p class="text-xs text-gray-500 mb-2">Format: <code class="bg-gray-100 px-1 rounded">IP, hostname, status</code></p>
+                <p class="text-sm text-surface-600 mb-4">Enter one IP per line. Optionally add hostname and status separated by comma.</p>
+                <p class="text-xs text-surface-400 mb-3">Format: <code class="bg-surface-100 px-2 py-0.5 rounded-md font-mono text-surface-600">IP, hostname, status</code></p>
                 <textarea id="bulkIPs" rows="10" class="input-field font-mono text-sm" placeholder="192.168.1.10, server01, in-use&#10;192.168.1.11, server02, in-use&#10;192.168.1.12"></textarea>
-                <div class="flex gap-3 justify-end mt-4">
+                <div class="flex gap-3 justify-end mt-5">
                     <button onclick="closeBulkModal()" class="btn-secondary">Cancel</button>
                     <button onclick="processBulkAdd()" class="btn-primary">
-                        <i class="fas fa-plus mr-2"></i>Add IPs
+                        <i class="fas fa-plus mr-2 text-xs"></i>Add IPs
                     </button>
                 </div>
             </div>
@@ -725,65 +1034,69 @@
     </div>
 
     <!-- Scan Modal -->
-    <div id="scanModal" class="hidden modal-overlay fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 overflow-hidden">
-            <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-5 flex justify-between items-center">
-                <h2 class="text-xl font-semibold">Scan Subnet</h2>
-                <button onclick="closeScanModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+    <div id="scanModal" class="hidden modal-overlay">
+        <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-3xl mx-4 overflow-hidden scale-in border border-surface-200/50">
+            <div class="bg-gradient-to-r from-indigo-600 via-indigo-600 to-violet-600 text-white p-6 flex justify-between items-center relative overflow-hidden">
+                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="relative">
+                    <h2 class="text-xl font-bold">Scan Subnet</h2>
+                    <p class="text-indigo-200 text-sm mt-0.5">Discover active hosts</p>
+                </div>
+                <button onclick="closeScanModal()" class="relative p-2 hover:bg-white/10 rounded-xl transition-all">
                     <i class="fas fa-times text-lg"></i>
                 </button>
             </div>
             <div class="p-6 space-y-5">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Scan Type</label>
-                        <div class="flex items-center gap-4 text-sm text-gray-700">
-                            <label class="flex items-center gap-2"><input type="radio" name="scanType" value="ping" checked> Ping (fast)</label>
-                            <label class="flex items-center gap-2"><input type="radio" name="scanType" value="full"> Full (detailed)</label>
+                        <label class="block text-xs font-semibold text-surface-600 mb-2">Scan Type</label>
+                        <div class="flex items-center gap-5 text-sm text-surface-700">
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="scanType" value="ping" checked class="text-indigo-600 focus:ring-indigo-500"> Ping (fast)</label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="scanType" value="full" class="text-indigo-600 focus:ring-indigo-500"> Full (detailed)</label>
                         </div>
                     </div>
                     <div class="flex items-end justify-end">
                         <button id="startScanBtn" onclick="startScanJob()" class="btn-primary">
-                            <i class="fas fa-play mr-2"></i>Start Scan
+                            <i class="fas fa-play mr-2 text-xs"></i>Start Scan
                         </button>
                     </div>
                 </div>
 
-                <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-medium text-gray-700">Progress</span>
-                        <span id="scanDiscoveredCount" class="text-sm text-gray-500">0 hosts discovered</span>
+                <div class="bg-surface-50 rounded-xl p-4 border border-surface-200/50">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-sm font-semibold text-surface-700">Progress</span>
+                        <span id="scanDiscoveredCount" class="text-sm text-surface-500 font-medium">0 hosts discovered</span>
                     </div>
-                    <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div id="scanProgressBar" class="h-full bg-gradient-to-r from-indigo-500 to-indigo-400 progress-bar" style="width: 0%"></div>
+                    <div class="h-2.5 bg-surface-200 rounded-full overflow-hidden">
+                        <div id="scanProgressBar" class="h-full bg-gradient-to-r from-indigo-500 via-indigo-400 to-violet-400 progress-bar rounded-full" style="width: 0%"></div>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <h4 class="text-sm font-medium text-gray-700 mb-2">Live Log</h4>
-                        <pre id="scanLogs" class="bg-gray-900 text-gray-100 text-xs rounded-lg p-3 h-64 overflow-auto"></pre>
+                        <h4 class="text-xs font-bold text-surface-500 uppercase tracking-wider mb-2">Live Log</h4>
+                        <pre id="scanLogs" class="bg-surface-900 text-surface-100 text-xs rounded-xl p-4 h-64 overflow-auto font-mono"></pre>
                     </div>
                     <div>
-                        <h4 class="text-sm font-medium text-gray-700 mb-2">Discovered Hosts</h4>
-                        <div id="scanDiscoveredList" class="bg-gray-50 border border-gray-200 rounded-lg p-3 h-64 overflow-auto space-y-2"></div>
+                        <h4 class="text-xs font-bold text-surface-500 uppercase tracking-wider mb-2">Discovered Hosts</h4>
+                        <div id="scanDiscoveredList" class="bg-surface-50 border border-surface-200 rounded-xl p-4 h-64 overflow-auto space-y-2"></div>
                     </div>
                 </div>
 
-                <div id="scanImportControls" class="hidden border-t border-gray-200 pt-4">
-                    <div class="flex flex-wrap items-center gap-4 mb-3 text-sm text-gray-700">
-                        <span class="font-medium">Import fields:</span>
-                        <label class="flex items-center gap-2"><input type="checkbox" id="importHostname" checked> Hostname</label>
-                        <label class="flex items-center gap-2"><input type="checkbox" id="importMAC" checked> MAC</label>
-                        <label class="flex items-center gap-2"><input type="checkbox" id="importDeviceType" checked> Device Type</label>
-                        <label class="flex items-center gap-2"><input type="checkbox" id="importOS"> OS → Description</label>
+                <div id="scanImportControls" class="hidden border-t border-surface-200 pt-5">
+                    <div class="flex flex-wrap items-center gap-4 mb-4 text-sm text-surface-700">
+                        <span class="font-semibold text-surface-600">Import fields:</span>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="importHostname" checked class="rounded text-indigo-600 focus:ring-indigo-500"> Hostname</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="importMAC" checked class="rounded text-indigo-600 focus:ring-indigo-500"> MAC</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="importDeviceType" checked class="rounded text-indigo-600 focus:ring-indigo-500"> Device Type</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="importOS" class="rounded text-indigo-600 focus:ring-indigo-500"> OS → Description</label>
                     </div>
                     <div class="flex gap-3 justify-end">
                         <button onclick="importScanResults(true)" class="btn-success">
-                            <i class="fas fa-check-double mr-2"></i>Import All
+                            <i class="fas fa-check-double mr-2 text-xs"></i>Import All
                         </button>
                         <button onclick="importScanResults(false)" class="btn-primary">
-                            <i class="fas fa-check mr-2"></i>Import Selected
+                            <i class="fas fa-check mr-2 text-xs"></i>Import Selected
                         </button>
                     </div>
                 </div>
@@ -791,27 +1104,33 @@
         </div>
     </div>
     <!-- Import Modal -->
-    <div id="importModal" class="hidden modal-overlay fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
-            <div class="bg-gradient-to-r from-teal-600 to-teal-700 text-white p-5 flex justify-between items-center">
-                <h2 class="text-xl font-semibold">Import Data</h2>
-                <button onclick="closeImportModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+    <div id="importModal" class="hidden modal-overlay">
+        <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-lg mx-4 overflow-hidden scale-in border border-surface-200/50">
+            <div class="bg-gradient-to-r from-teal-600 via-teal-600 to-cyan-600 text-white p-6 flex justify-between items-center relative overflow-hidden">
+                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="relative">
+                    <h2 class="text-xl font-bold">Import Data</h2>
+                    <p class="text-teal-200 text-sm mt-0.5">Restore from backup file</p>
+                </div>
+                <button onclick="closeImportModal()" class="relative p-2 hover:bg-white/10 rounded-xl transition-all">
                     <i class="fas fa-times text-lg"></i>
                 </button>
             </div>
             <div class="p-6">
-                <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    <i class="fas fa-file-upload text-4xl text-gray-400 mb-3"></i>
-                    <p class="text-gray-600 mb-2">Drop your JSON file here or</p>
+                <div class="border-2 border-dashed border-surface-300 rounded-xl p-10 text-center hover:border-teal-400 hover:bg-teal-50/30 transition-all cursor-pointer group" onclick="document.getElementById('importFile').click()">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-surface-100 flex items-center justify-center group-hover:bg-teal-100 transition-colors">
+                        <i class="fas fa-file-upload text-2xl text-surface-400 group-hover:text-teal-500 transition-colors"></i>
+                    </div>
+                    <p class="text-surface-600 mb-3 font-medium">Drop your JSON file here or</p>
                     <input type="file" id="importFile" accept=".json" class="hidden" onchange="handleImportFile(event)">
-                    <button onclick="document.getElementById('importFile').click()" class="btn-primary">
+                    <button type="button" class="btn-primary">
                         Browse Files
                     </button>
                 </div>
-                <div class="mt-4">
-                    <label class="flex items-center gap-2 text-sm text-gray-600">
-                        <input type="checkbox" id="importReplace" class="rounded">
-                        <span>Replace existing data (dangerous!)</span>
+                <div class="mt-5 p-4 bg-red-50 border border-red-200 rounded-xl">
+                    <label class="flex items-center gap-3 text-sm text-red-700 cursor-pointer">
+                        <input type="checkbox" id="importReplace" class="rounded border-red-300 text-red-600 focus:ring-red-500">
+                        <span class="font-medium">Replace existing data (dangerous!)</span>
                     </label>
                 </div>
             </div>
@@ -822,76 +1141,81 @@
     <div id="sidebarOverlay" class="hidden fixed inset-0 bg-black/50 z-30 lg:hidden" onclick="toggleSidebar()"></div>
 
     <!-- Setup Modal (First Time Setup) -->
-    <div id="setupModal" class="hidden modal-overlay fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-            <div class="bg-gradient-to-r from-primary-600 to-primary-700 text-white p-6">
-                <div class="flex items-center gap-3 mb-2">
-                    <i class="fas fa-rocket text-2xl"></i>
-                    <h2 class="text-2xl font-bold">Welcome to NetDoc IPAM</h2>
+    <div id="setupModal" class="hidden modal-overlay">
+        <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-md mx-4 overflow-hidden scale-in border border-surface-200/50">
+            <div class="bg-gradient-to-r from-primary-600 via-primary-600 to-accent-600 text-white p-8 relative overflow-hidden">
+                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="relative">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                            <i class="fas fa-rocket text-xl"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold">Welcome to NetDoc IPAM</h2>
+                    </div>
+                    <p class="text-primary-200">Complete the initial setup to get started</p>
                 </div>
-                <p class="text-primary-200">Complete the initial setup to get started</p>
             </div>
-            <form id="setupForm" class="p-6 space-y-4" onsubmit="handleSetup(event)">
+            <form id="setupForm" class="p-6 space-y-5" onsubmit="handleSetup(event)">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Admin Username</label>
+                    <label class="block text-xs font-semibold text-surface-600 mb-2">Admin Username</label>
                     <input type="text" id="setupUsername" required class="input-field" placeholder="Create admin username (min 3 chars)" autocomplete="username">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Admin Email</label>
+                    <label class="block text-xs font-semibold text-surface-600 mb-2">Admin Email</label>
                     <input type="email" id="setupEmail" required class="input-field" placeholder="Enter admin email" autocomplete="email">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                    <label class="block text-xs font-semibold text-surface-600 mb-2">Password</label>
                     <input type="password" id="setupPassword" required class="input-field" placeholder="Min 8 characters" autocomplete="new-password" oninput="checkPasswordStrength('setupPassword')">
-                    
+
                     <!-- Password Strength Indicator -->
-                    <div id="setupPasswordStrength" class="mt-3 hidden">
-                        <div class="mb-2">
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="text-xs font-medium text-gray-600">Password Strength</span>
-                                <span id="setupPasswordLevel" class="text-xs font-bold text-gray-600">Very Weak</span>
+                    <div id="setupPasswordStrength" class="mt-4 hidden bg-surface-50 rounded-xl p-4 border border-surface-200">
+                        <div class="mb-3">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-semibold text-surface-500">Password Strength</span>
+                                <span id="setupPasswordLevel" class="text-xs font-bold text-surface-600">Very Weak</span>
                             </div>
-                            <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="w-full bg-surface-200 rounded-full h-2">
                                 <div id="setupPasswordBar" class="bg-red-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
                             </div>
                         </div>
-                        
+
                         <!-- Funny Message -->
-                        <p id="setupPasswordMessage" class="text-sm font-medium text-gray-700 mb-2">🤦 Come on, that's weaker than my WiFi password!</p>
-                        
+                        <p id="setupPasswordMessage" class="text-sm font-medium text-surface-700 mb-3">Come on, that's weaker than my WiFi password!</p>
+
                         <!-- Requirements Checklist -->
-                        <div class="space-y-1.5 text-xs">
+                        <div class="space-y-2 text-xs">
                             <div class="flex items-center gap-2">
-                                <span id="setupReqLength" class="text-gray-400">✗</span>
-                                <span>At least 8 characters</span>
+                                <span id="setupReqLength" class="text-surface-400">✗</span>
+                                <span class="text-surface-600">At least 8 characters</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span id="setupReqUppercase" class="text-gray-400">✗</span>
-                                <span>Uppercase letter (A-Z)</span>
+                                <span id="setupReqUppercase" class="text-surface-400">✗</span>
+                                <span class="text-surface-600">Uppercase letter (A-Z)</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span id="setupReqLowercase" class="text-gray-400">✗</span>
-                                <span>Lowercase letter (a-z)</span>
+                                <span id="setupReqLowercase" class="text-surface-400">✗</span>
+                                <span class="text-surface-600">Lowercase letter (a-z)</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span id="setupReqNumbers" class="text-gray-400">✗</span>
-                                <span>Number (0-9)</span>
+                                <span id="setupReqNumbers" class="text-surface-400">✗</span>
+                                <span class="text-surface-600">Number (0-9)</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span id="setupReqSpecial" class="text-gray-400">✗</span>
-                                <span>Special character (!@#$%^&*)</span>
+                                <span id="setupReqSpecial" class="text-surface-400">✗</span>
+                                <span class="text-surface-600">Special character (!@#$%^&*)</span>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Confirm Password</label>
+                    <label class="block text-xs font-semibold text-surface-600 mb-2">Confirm Password</label>
                     <input type="password" id="setupConfirmPassword" required class="input-field" placeholder="Re-enter password" autocomplete="new-password">
                 </div>
-                <button type="submit" class="w-full btn-primary">
-                    <i class="fas fa-check mr-2"></i>Complete Setup
+                <button type="submit" class="w-full btn-primary !py-3">
+                    <i class="fas fa-check mr-2 text-xs"></i>Complete Setup
                 </button>
-                <p class="text-xs text-gray-500 text-center mt-4">
+                <p class="text-xs text-surface-400 text-center mt-4">
                     This account will have full admin access to NetDoc IPAM
                 </p>
             </form>
@@ -899,237 +1223,269 @@
     </div>
 
     <!-- Login Modal -->
-    <div id="loginModal" class="hidden modal-overlay fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-            <div class="bg-gradient-to-r from-primary-600 to-primary-700 text-white p-5 flex items-center justify-center">
-                <h2 class="text-xl font-semibold">Login to NetDoc IPAM</h2>
+    <div id="loginModal" class="hidden modal-overlay">
+        <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-md mx-4 overflow-hidden scale-in border border-surface-200/50">
+            <div class="bg-gradient-to-r from-primary-600 via-primary-600 to-accent-600 text-white p-8 flex flex-col items-center justify-center relative overflow-hidden">
+                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="relative">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                        <i class="fas fa-network-wired text-2xl"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-center">Login to NetDoc IPAM</h2>
+                </div>
             </div>
-            <form id="loginForm" class="p-6 space-y-4" onsubmit="handleLogin(event)">
+            <form id="loginForm" class="p-6 space-y-5" onsubmit="handleLogin(event)">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Username</label>
+                    <label class="block text-xs font-semibold text-surface-600 mb-2">Username</label>
                     <input type="text" id="loginUsername" required class="input-field" placeholder="Enter your username" autocomplete="username">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                    <label class="block text-xs font-semibold text-surface-600 mb-2">Password</label>
                     <input type="password" id="loginPassword" required class="input-field" placeholder="Enter your password" autocomplete="current-password">
                 </div>
-                <button type="submit" class="w-full btn-primary">
-                    <i class="fas fa-sign-in-alt mr-2"></i>Login
+                <button type="submit" class="w-full btn-primary !py-3">
+                    <i class="fas fa-sign-in-alt mr-2 text-xs"></i>Login
                 </button>
-                <div class="text-center text-sm text-gray-600">
-                    Don't have an account? <button type="button" onclick="switchToRegister()" class="text-primary-600 hover:text-primary-800 font-medium">Register here</button>
+                <div class="text-center text-sm text-surface-500">
+                    Don't have an account? <button type="button" onclick="switchToRegister()" class="text-primary-600 hover:text-primary-700 font-semibold">Register here</button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- Register Modal -->
-    <div id="registerModal" class="hidden modal-overlay fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-            <div class="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white p-5 flex items-center justify-center">
-                <h2 class="text-xl font-semibold">Create Account</h2>
+    <div id="registerModal" class="hidden modal-overlay">
+        <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-md mx-4 overflow-hidden scale-in border border-surface-200/50">
+            <div class="bg-gradient-to-r from-emerald-600 via-emerald-600 to-teal-600 text-white p-8 flex flex-col items-center justify-center relative overflow-hidden">
+                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="relative">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                        <i class="fas fa-user-plus text-2xl"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-center">Create Account</h2>
+                </div>
             </div>
-            <form id="registerForm" class="p-6 space-y-4" onsubmit="handleRegister(event)">
+            <form id="registerForm" class="p-6 space-y-5" onsubmit="handleRegister(event)">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Username</label>
+                    <label class="block text-xs font-semibold text-surface-600 mb-2">Username</label>
                     <input type="text" id="registerUsername" required class="input-field" placeholder="Choose a username (min 3 chars)" autocomplete="username">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+                    <label class="block text-xs font-semibold text-surface-600 mb-2">Email</label>
                     <input type="email" id="registerEmail" required class="input-field" placeholder="Enter your email" autocomplete="email">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                    <label class="block text-xs font-semibold text-surface-600 mb-2">Password</label>
                     <input type="password" id="registerPassword" required class="input-field" placeholder="Min 8 characters" autocomplete="new-password" oninput="checkPasswordStrength('registerPassword')">
-                    
+
                     <!-- Password Strength Indicator -->
-                    <div id="registerPasswordStrength" class="mt-3 hidden">
-                        <div class="mb-2">
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="text-xs font-medium text-gray-600">Password Strength</span>
-                                <span id="registerPasswordLevel" class="text-xs font-bold text-gray-600">Very Weak</span>
+                    <div id="registerPasswordStrength" class="mt-4 hidden bg-surface-50 rounded-xl p-4 border border-surface-200">
+                        <div class="mb-3">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-semibold text-surface-500">Password Strength</span>
+                                <span id="registerPasswordLevel" class="text-xs font-bold text-surface-600">Very Weak</span>
                             </div>
-                            <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="w-full bg-surface-200 rounded-full h-2">
                                 <div id="registerPasswordBar" class="bg-red-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
                             </div>
                         </div>
-                        
+
                         <!-- Funny Message -->
-                        <p id="registerPasswordMessage" class="text-sm font-medium text-gray-700 mb-2">🤦 Come on, that's weaker than my WiFi password!</p>
-                        
+                        <p id="registerPasswordMessage" class="text-sm font-medium text-surface-700 mb-3">Come on, that's weaker than my WiFi password!</p>
+
                         <!-- Requirements Checklist -->
-                        <div class="space-y-1.5 text-xs">
+                        <div class="space-y-2 text-xs">
                             <div class="flex items-center gap-2">
-                                <span id="reqLength" class="text-gray-400">✗</span>
-                                <span>At least 8 characters</span>
+                                <span id="reqLength" class="text-surface-400">✗</span>
+                                <span class="text-surface-600">At least 8 characters</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span id="reqUppercase" class="text-gray-400">✗</span>
-                                <span>Uppercase letter (A-Z)</span>
+                                <span id="reqUppercase" class="text-surface-400">✗</span>
+                                <span class="text-surface-600">Uppercase letter (A-Z)</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span id="reqLowercase" class="text-gray-400">✗</span>
-                                <span>Lowercase letter (a-z)</span>
+                                <span id="reqLowercase" class="text-surface-400">✗</span>
+                                <span class="text-surface-600">Lowercase letter (a-z)</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span id="reqNumbers" class="text-gray-400">✗</span>
-                                <span>Number (0-9)</span>
+                                <span id="reqNumbers" class="text-surface-400">✗</span>
+                                <span class="text-surface-600">Number (0-9)</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span id="reqSpecial" class="text-gray-400">✗</span>
-                                <span>Special character (!@#$%^&*)</span>
+                                <span id="reqSpecial" class="text-surface-400">✗</span>
+                                <span class="text-surface-600">Special character (!@#$%^&*)</span>
                             </div>
                         </div>
                     </div>
                 </div>
-                <button type="submit" class="w-full btn-success">
-                    <i class="fas fa-user-plus mr-2"></i>Create Account
+                <button type="submit" class="w-full btn-success !py-3">
+                    <i class="fas fa-user-plus mr-2 text-xs"></i>Create Account
                 </button>
-                <div class="text-center text-sm text-gray-600">
-                    Already have an account? <button type="button" onclick="switchToLogin()" class="text-primary-600 hover:text-primary-800 font-medium">Login here</button>
+                <div class="text-center text-sm text-surface-500">
+                    Already have an account? <button type="button" onclick="switchToLogin()" class="text-primary-600 hover:text-primary-700 font-semibold">Login here</button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- Settings Modal -->
-    <div id="settingsModal" class="hidden modal-overlay fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden max-h-[90vh] flex flex-col">
-            <div class="bg-gradient-to-r from-slate-600 to-slate-700 text-white p-5 flex justify-between items-center sticky top-0">
-                <h2 class="text-xl font-semibold">Advanced Settings</h2>
-                <button onclick="closeSettingsModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+    <div id="settingsModal" class="hidden modal-overlay">
+        <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-2xl mx-4 overflow-hidden max-h-[90vh] flex flex-col scale-in border border-surface-200/50">
+            <div class="bg-gradient-to-r from-surface-700 via-surface-700 to-surface-800 text-white p-6 flex justify-between items-center sticky top-0 relative overflow-hidden">
+                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="relative">
+                    <h2 class="text-xl font-bold">Advanced Settings</h2>
+                    <p class="text-surface-400 text-sm mt-0.5">Manage your account and preferences</p>
+                </div>
+                <button onclick="closeSettingsModal()" class="relative p-2 hover:bg-white/10 rounded-xl transition-all">
                     <i class="fas fa-times text-lg"></i>
                 </button>
             </div>
-            <div class="bg-white border-b border-gray-200 px-6 pt-4 pb-0 sticky top-[70px] z-10">
-                <div class="flex gap-8 border-b border-gray-200">
-                    <button id="settingsTabUser" class="px-2 py-4 text-sm font-semibold text-primary-600 border-b-2 border-primary-600 hover:text-primary-700 transition-colors" onclick="switchSettingsTab('user')">
-                        <i class="fas fa-user mr-2"></i>User
+            <div class="bg-white border-b border-surface-200 px-6 pt-4 pb-0 sticky top-[82px] z-10">
+                <div class="flex gap-1 bg-surface-100/50 p-1 rounded-xl w-fit">
+                    <button id="settingsTabUser" class="px-5 py-2.5 text-sm font-semibold text-primary-700 bg-white rounded-lg shadow-sm transition-all" onclick="switchSettingsTab('user')">
+                        <i class="fas fa-user mr-2 text-xs"></i>User
                     </button>
-                    <button id="settingsTabSystem" class="px-2 py-4 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300 transition-colors" onclick="switchSettingsTab('system')">
-                        <i class="fas fa-cog mr-2\"></i>System
+                    <button id="settingsTabSystem" class="px-5 py-2.5 text-sm font-semibold text-surface-500 hover:text-surface-700 hover:bg-white/50 rounded-lg transition-all" onclick="switchSettingsTab('system')">
+                        <i class="fas fa-cog mr-2 text-xs"></i>System
                     </button>
                 </div>
             </div>
             <div class="overflow-y-auto flex-1 p-6 space-y-6">
                 <div id="settingsUserPane" class="space-y-6">
                     <!-- User Account Section -->
-                    <div class="pb-6 border-b border-gray-200">
+                    <div class="pb-6 border-b border-surface-200">
                         <div class="flex items-center gap-2 mb-4">
-                            <i class="fas fa-user text-primary-600"></i>
-                            <h3 class="text-sm font-semibold text-gray-700">Account Information</h3>
+                            <div class="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center">
+                                <i class="fas fa-user text-primary-500 text-sm"></i>
+                            </div>
+                            <h3 class="text-sm font-bold text-surface-700">Account Information</h3>
                         </div>
-                        <div class="space-y-2 text-sm bg-gray-50 rounded-lg p-4">
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Username:</span>
-                                <span class="font-medium text-gray-800" id="settingsUsername">-</span>
+                        <div class="space-y-3 text-sm bg-surface-50 rounded-xl p-5 border border-surface-200/50">
+                            <div class="flex justify-between items-center">
+                                <span class="text-surface-500">Username:</span>
+                                <span class="font-semibold text-surface-800" id="settingsUsername">-</span>
                             </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Email:</span>
-                                <span class="font-medium text-gray-800" id="settingsEmail">-</span>
+                            <div class="flex justify-between items-center">
+                                <span class="text-surface-500">Email:</span>
+                                <span class="font-semibold text-surface-800" id="settingsEmail">-</span>
                             </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Role:</span>
-                                <span class="font-medium text-gray-800" id="settingsRole">-</span>
+                            <div class="flex justify-between items-center">
+                                <span class="text-surface-500">Role:</span>
+                                <span class="font-semibold text-surface-800" id="settingsRole">-</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Security Section -->
-                    <div class="pb-6 border-b border-gray-200">
+                    <div class="pb-6 border-b border-surface-200">
                         <div class="flex items-center gap-2 mb-4">
-                            <i class="fas fa-lock text-primary-600"></i>
-                            <h3 class="text-sm font-semibold text-gray-700">Security</h3>
+                            <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                                <i class="fas fa-lock text-amber-500 text-sm"></i>
+                            </div>
+                            <h3 class="text-sm font-bold text-surface-700">Security</h3>
                         </div>
-                        <form id="passwordForm" class="space-y-3" onsubmit="handleChangePassword(event)">
+                        <form id="passwordForm" class="space-y-4" onsubmit="handleChangePassword(event)">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                                <label class="block text-xs font-semibold text-surface-600 mb-2">Current Password</label>
                                 <input type="password" id="currentPassword" required class="input-field" placeholder="Enter current password" autocomplete="current-password">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                                <label class="block text-xs font-semibold text-surface-600 mb-2">New Password</label>
                                 <input type="password" id="newPassword" required class="input-field" placeholder="Min 8 characters" autocomplete="new-password">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                                <label class="block text-xs font-semibold text-surface-600 mb-2">Confirm Password</label>
                                 <input type="password" id="confirmPassword" required class="input-field" placeholder="Confirm new password" autocomplete="new-password">
                             </div>
                             <button type="submit" class="w-full btn-primary">
-                                <i class="fas fa-key mr-2"></i>Update Password
+                                <i class="fas fa-key mr-2 text-xs"></i>Update Password
                             </button>
                         </form>
                     </div>
                 </div>
 
                 <div id="settingsSystemPane" class="space-y-6 hidden">
-                    
+
                     <!-- Data Management Section -->
-                    <div class="pb-6 border-b border-gray-200">
+                    <div class="pb-6 border-b border-surface-200">
                         <div class="flex items-center gap-2 mb-4">
-                            <i class="fas fa-database text-primary-600"></i>
-                            <h3 class="text-sm font-semibold text-gray-700">Data Management</h3>
+                            <div class="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center">
+                                <i class="fas fa-database text-primary-500 text-sm"></i>
+                            </div>
+                            <h3 class="text-sm font-bold text-surface-700">Data Management</h3>
                         </div>
                         <div class="space-y-3">
-                            <button onclick="showExportModal()" class="w-full btn-secondary text-left flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-colors">
-                                <i class="fas fa-download w-5 text-primary-600"></i>
+                            <button onclick="showExportModal()" class="w-full text-left flex items-center gap-4 p-4 rounded-xl border border-surface-200 hover:border-primary-300 hover:bg-primary-50/50 transition-all group">
+                                <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center group-hover:bg-primary-100 transition-colors">
+                                    <i class="fas fa-download text-primary-500"></i>
+                                </div>
                                 <div class="text-left">
-                                    <div class="font-medium text-gray-800">Export Data</div>
-                                    <div class="text-xs text-gray-500">Download all subnets and IPs as JSON</div>
+                                    <div class="font-semibold text-surface-800">Export Data</div>
+                                    <div class="text-xs text-surface-500">Download all subnets and IPs as JSON</div>
                                 </div>
                             </button>
-                            <button onclick="showImportModal()" class="w-full btn-secondary text-left flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-colors">
-                                <i class="fas fa-upload w-5 text-primary-600"></i>
+                            <button onclick="showImportModal()" class="w-full text-left flex items-center gap-4 p-4 rounded-xl border border-surface-200 hover:border-primary-300 hover:bg-primary-50/50 transition-all group">
+                                <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center group-hover:bg-primary-100 transition-colors">
+                                    <i class="fas fa-upload text-primary-500"></i>
+                                </div>
                                 <div class="text-left">
-                                    <div class="font-medium text-gray-800">Import Data</div>
-                                    <div class="text-xs text-gray-500">Restore or merge data from JSON file</div>
+                                    <div class="font-semibold text-surface-800">Import Data</div>
+                                    <div class="text-xs text-surface-500">Restore or merge data from JSON file</div>
                                 </div>
                             </button>
                         </div>
                     </div>
 
                     <!-- Application & Updates Section -->
-                    <div class="pb-6 border-b border-gray-200">
+                    <div class="pb-6 border-b border-surface-200">
                         <div class="flex items-center gap-2 mb-4">
-                            <i class="fas fa-info-circle text-primary-600"></i>
-                            <h3 class="text-sm font-semibold text-gray-700">Application & Updates</h3>
+                            <div class="w-8 h-8 rounded-lg bg-accent-50 flex items-center justify-center">
+                                <i class="fas fa-info-circle text-accent-500 text-sm"></i>
+                            </div>
+                            <h3 class="text-sm font-bold text-surface-700">Application & Updates</h3>
                         </div>
-                        <div class="bg-gray-50 rounded-lg p-4 space-y-4">
+                        <div class="bg-surface-50 rounded-xl p-5 space-y-4 border border-surface-200/50">
                             <div class="flex justify-between items-center py-2 gap-3">
-                                <div class="text-gray-600">Version:</div>
+                                <div class="text-surface-500 text-sm">Version:</div>
                                 <div class="flex items-center gap-2">
-                                    <span class="font-medium text-gray-800 font-mono" id="appVersion">-</span>
-                                    <span id="versionBadge" class="text-xs px-2.5 py-1 rounded-full font-semibold bg-gray-200 text-gray-700">Checking...</span>
+                                    <span class="font-semibold text-surface-800 font-mono" id="appVersion">-</span>
+                                    <span id="versionBadge" class="text-xs px-3 py-1 rounded-full font-semibold bg-surface-200 text-surface-600">Checking...</span>
                                 </div>
                             </div>
-                            <div class="pt-4">
+                            <div class="pt-2">
                                 <button id="updateCheckBtn" onclick="checkForUpdates()" class="w-full btn-primary text-sm">
-                                    <i class="fas fa-sync mr-2"></i>Check for Updates
+                                    <i class="fas fa-sync mr-2 text-xs"></i>Check for Updates
                                 </button>
                             </div>
                         </div>
                     </div>
 
                     <!-- Admin Panel Section -->
-                    <div id="adminPanelSection" class="pb-6 border-b border-gray-200 hidden">
+                    <div id="adminPanelSection" class="pb-6 border-b border-surface-200 hidden">
                         <div class="flex items-center gap-2 mb-4">
-                            <i class="fas fa-shield-alt text-red-600"></i>
-                            <h3 class="text-sm font-semibold text-gray-700">Administration</h3>
+                            <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
+                                <i class="fas fa-shield-alt text-red-500 text-sm"></i>
+                            </div>
+                            <h3 class="text-sm font-bold text-surface-700">Administration</h3>
                         </div>
-                        <button onclick="showAdminUsersModal()" class="w-full btn-secondary text-left flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-red-300 hover:bg-red-50 transition-colors">
-                            <i class="fas fa-users-cog w-5 text-red-600"></i>
+                        <button onclick="showAdminUsersModal()" class="w-full text-left flex items-center gap-4 p-4 rounded-xl border border-surface-200 hover:border-red-300 hover:bg-red-50/50 transition-all group">
+                            <div class="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center group-hover:bg-red-100 transition-colors">
+                                <i class="fas fa-users-cog text-red-500"></i>
+                            </div>
                             <div class="text-left">
-                                <div class="font-medium text-gray-800">Manage Users</div>
-                                <div class="text-xs text-gray-500">Create, modify, and delete user accounts</div>
+                                <div class="font-semibold text-surface-800">Manage Users</div>
+                                <div class="text-xs text-surface-500">Create, modify, and delete user accounts</div>
                             </div>
                         </button>
                     </div>
                 </div>
 
                 <!-- Footer Actions -->
-                <div class="flex gap-3 justify-end pt-6 border-t border-gray-200">
+                <div class="flex gap-3 justify-end pt-6 border-t border-surface-200">
                     <button onclick="closeSettingsModal()" class="btn-secondary">Close</button>
                     <button onclick="handleLogout()" class="btn-danger">
-                        <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                        <i class="fas fa-sign-out-alt mr-2 text-xs"></i>Logout
                     </button>
                 </div>
             </div>
@@ -1137,48 +1493,58 @@
     </div>
 
     <!-- Admin Users Modal -->
-    <div id="adminUsersModal" class="hidden modal-overlay fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden max-h-[90vh]">
-            <div class="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-5 flex justify-between items-center">
-                <h2 class="text-xl font-semibold">User Management</h2>
-                <button onclick="closeAdminUsersModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+    <div id="adminUsersModal" class="hidden modal-overlay">
+        <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-4xl mx-4 overflow-hidden max-h-[90vh] scale-in border border-surface-200/50">
+            <div class="bg-gradient-to-r from-accent-600 via-accent-600 to-purple-600 text-white p-6 flex justify-between items-center relative overflow-hidden">
+                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="relative">
+                    <h2 class="text-xl font-bold">User Management</h2>
+                    <p class="text-accent-200 text-sm mt-0.5">Manage user accounts and permissions</p>
+                </div>
+                <button onclick="closeAdminUsersModal()" class="relative p-2 hover:bg-white/10 rounded-xl transition-all">
                     <i class="fas fa-times text-lg"></i>
                 </button>
             </div>
             <div class="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                 <!-- Create New User -->
-                <div class="border border-gray-200 rounded-lg p-4">
-                    <h3 class="text-sm font-semibold text-gray-700 mb-4">Create New User</h3>
+                <div class="bg-surface-50/50 border border-surface-200 rounded-xl p-5">
+                    <h3 class="text-sm font-bold text-surface-700 mb-4 flex items-center gap-2">
+                        <i class="fas fa-user-plus text-accent-500"></i>
+                        Create New User
+                    </h3>
                     <form id="adminCreateUserForm" class="grid grid-cols-1 md:grid-cols-2 gap-4" onsubmit="handleAdminCreateUser(event)">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                            <label class="block text-xs font-semibold text-surface-600 mb-2">Username</label>
                             <input type="text" id="adminNewUsername" required class="input-field" placeholder="Min 3 characters" autocomplete="username">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <label class="block text-xs font-semibold text-surface-600 mb-2">Email</label>
                             <input type="email" id="adminNewEmail" required class="input-field" placeholder="user@example.com" autocomplete="email">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                            <label class="block text-xs font-semibold text-surface-600 mb-2">Password</label>
                             <input type="password" id="adminNewPassword" required class="input-field" placeholder="Min 8 characters" autocomplete="new-password">
                         </div>
-                        <div class="flex items-end">
-                            <label class="flex items-center gap-2 text-sm">
-                                <input type="checkbox" id="adminNewIsAdmin" class="rounded">
-                                <span class="text-gray-700">Grant Admin Rights</span>
+                        <div class="flex items-end pb-1">
+                            <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                <input type="checkbox" id="adminNewIsAdmin" class="rounded border-surface-300 text-accent-600 focus:ring-accent-500">
+                                <span class="text-surface-700 font-medium">Grant Admin Rights</span>
                             </label>
                         </div>
                         <button type="submit" class="md:col-span-2 btn-success">
-                            <i class="fas fa-user-plus mr-2"></i>Create User
+                            <i class="fas fa-user-plus mr-2 text-xs"></i>Create User
                         </button>
                     </form>
                 </div>
 
                 <!-- Users List -->
                 <div>
-                    <h3 class="text-sm font-semibold text-gray-700 mb-4">Active Users</h3>
+                    <h3 class="text-sm font-bold text-surface-700 mb-4 flex items-center gap-2">
+                        <i class="fas fa-users text-surface-400"></i>
+                        Active Users
+                    </h3>
                     <div id="adminUsersList" class="space-y-2 max-h-96 overflow-y-auto">
-                        <p class="text-gray-500 text-center py-8">Loading users...</p>
+                        <p class="text-surface-400 text-center py-10 font-medium">Loading users...</p>
                     </div>
                 </div>
             </div>
@@ -1186,57 +1552,70 @@
     </div>
 
     <!-- Sync Preview Modal -->
-    <div id="syncPreviewModal" class="hidden modal-overlay fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden mx-4">
-            <div class="bg-gradient-to-r from-primary-600 to-primary-700 text-white p-5 flex justify-between items-center">
-                <h2 class="text-xl font-semibold">Sync Preview — <span id="previewConnectorName">Connector</span></h2>
-                <button onclick="closePreviewModal()" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+    <div id="syncPreviewModal" class="hidden modal-overlay">
+        <div class="bg-white rounded-2xl shadow-premium-xl w-full max-w-4xl max-h-[90vh] overflow-hidden mx-4 scale-in border border-surface-200/50">
+            <div class="bg-gradient-to-r from-primary-600 via-primary-600 to-accent-600 text-white p-6 flex justify-between items-center relative overflow-hidden">
+                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMDUiIGN4PSIyMCIgY3k9IjIwIiByPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-50"></div>
+                <div class="relative">
+                    <h2 class="text-xl font-bold">Sync Preview — <span id="previewConnectorName">Connector</span></h2>
+                    <p class="text-primary-200 text-sm mt-0.5">Review changes before applying</p>
+                </div>
+                <button onclick="closePreviewModal()" class="relative p-2 hover:bg-white/10 rounded-xl transition-all">
                     <i class="fas fa-times text-lg"></i>
                 </button>
             </div>
-            <div class="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+            <div class="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-200px)]">
                 <!-- Summary -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                        <div class="text-xs text-gray-600">Total Clients</div>
-                        <div class="text-2xl font-bold text-primary-600" id="previewClientsCount">0</div>
+                    <div class="stat-card bg-gradient-to-br from-surface-50 to-surface-100/50 border border-surface-200/50">
+                        <div class="text-[10px] text-surface-500 uppercase tracking-wider font-bold">Total Clients</div>
+                        <div class="text-2xl font-bold text-primary-600 mt-1" id="previewClientsCount">0</div>
                     </div>
-                    <div class="bg-green-50 border border-green-200 rounded-lg p-3">
-                        <div class="text-xs text-green-600">New IPs</div>
-                        <div class="text-2xl font-bold text-green-600" id="previewAddedCount">0</div>
+                    <div class="stat-card bg-gradient-to-br from-emerald-50 to-emerald-100/50 border border-emerald-200/50">
+                        <div class="text-[10px] text-emerald-600 uppercase tracking-wider font-bold">New IPs</div>
+                        <div class="text-2xl font-bold text-emerald-600 mt-1" id="previewAddedCount">0</div>
                     </div>
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <div class="text-xs text-blue-600">Updates</div>
-                        <div class="text-2xl font-bold text-blue-600" id="previewUpdatedCount">0</div>
+                    <div class="stat-card bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200/50">
+                        <div class="text-[10px] text-blue-600 uppercase tracking-wider font-bold">Updates</div>
+                        <div class="text-2xl font-bold text-blue-600 mt-1" id="previewUpdatedCount">0</div>
                     </div>
-                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                        <div class="text-xs text-yellow-600">Skipped</div>
-                        <div class="text-2xl font-bold text-yellow-600" id="previewSkippedCount">0</div>
+                    <div class="stat-card bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200/50">
+                        <div class="text-[10px] text-amber-600 uppercase tracking-wider font-bold">Skipped</div>
+                        <div class="text-2xl font-bold text-amber-600 mt-1" id="previewSkippedCount">0</div>
                     </div>
                 </div>
 
                 <!-- Added Items -->
                 <div>
-                    <h3 class="text-sm font-semibold text-gray-700 mb-3">New IPs to Add</h3>
+                    <h3 class="text-xs font-bold text-surface-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <i class="fas fa-plus-circle text-emerald-500"></i>
+                        New IPs to Add
+                    </h3>
                     <div id="previewAddedList" class="space-y-2 max-h-64 overflow-y-auto"></div>
                 </div>
 
                 <!-- Updated Items -->
                 <div>
-                    <h3 class="text-sm font-semibold text-gray-700 mb-3">IPs to Update</h3>
+                    <h3 class="text-xs font-bold text-surface-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <i class="fas fa-sync-alt text-blue-500"></i>
+                        IPs to Update
+                    </h3>
                     <div id="previewUpdatedList" class="space-y-2 max-h-64 overflow-y-auto"></div>
                 </div>
 
                 <!-- Skipped Items -->
                 <div>
-                    <h3 class="text-sm font-semibold text-gray-700 mb-3">Skipped Records</h3>
+                    <h3 class="text-xs font-bold text-surface-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <i class="fas fa-forward text-amber-500"></i>
+                        Skipped Records
+                    </h3>
                     <div id="previewSkippedList" class="space-y-2 max-h-64 overflow-y-auto"></div>
                 </div>
             </div>
-            <div class="p-5 border-t border-gray-100 flex gap-3 justify-end">
+            <div class="p-5 border-t border-surface-100 flex gap-3 justify-end bg-surface-50/50">
                 <button onclick="closePreviewModal()" class="btn-secondary">Cancel</button>
                 <button onclick="applyPreviewSync()" class="btn-success">
-                    <i class="fas fa-check mr-2"></i>Apply Changes
+                    <i class="fas fa-check mr-2 text-xs"></i>Apply Changes
                 </button>
             </div>
         </div>
