@@ -35,3 +35,11 @@ db_data/
 
 # Internal documentation (not for public GitHub)
 IMPLEMENTATION_NOTES.md
+
+# Sensitive files
+cookies.txt
+*.cookies
+
+# Test files (keep locally, not in repo)
+tests/
+pytest.ini
