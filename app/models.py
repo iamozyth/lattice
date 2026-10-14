@@ -1,19 +1,41 @@
-from app import db, login_manager
-from datetime import datetime
 import ipaddress
-import re
-from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
+
 from flask_login import UserMixin
-from sqlalchemy import LargeBinary
+from werkzeug.security import check_password_hash, generate_password_hash
+
+from app import db, login_manager
+
+# IP statuses that count towards a subnet's utilization
+USED_STATUSES = ('in-use', 'reserved', 'dhcp', 'blocked')
+IP_STATUSES = ('available', 'in-use', 'reserved', 'blocked', 'dhcp', 'deprecated')
+ROLES = ('viewer', 'editor', 'admin')
+
+# Largest count we send to the browser; JS numbers lose precision above 2**53
+MAX_JS_INT = 2**53 - 1
+
+
+def ip_sort_key(ip_str):
+    """Sort key for addresses that works across IPv4 and IPv6."""
+    try:
+        ip = ipaddress.ip_address(ip_str)
+        return (ip.version, int(ip))
+    except ValueError:
+        return (99, 0)
+
+
+def _iso(value):
+    return value.isoformat() if value else None
+
 
 class Connector(db.Model):
     __tablename__ = 'connectors'
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    type = db.Column(db.String(50), nullable=False)  # e.g., 'unifi'
-    config_encrypted = db.Column(LargeBinary, nullable=False)
-    enabled = db.Column(db.Boolean, default=True)
+    type = db.Column(db.String(50), nullable=False)
+    config_encrypted = db.Column(db.LargeBinary, nullable=False)
+    enabled = db.Column(db.Boolean, nullable=False, default=True, server_default=db.true())
     last_sync_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -23,137 +45,124 @@ class Connector(db.Model):
         db.Index('idx_connector_enabled', 'enabled'),
     )
 
-    def to_dict(self, include_details: bool = False, details: dict | None = None):
-        """Serialize without exposing secrets. Optionally include safe details."""
-        data = {
+    def to_dict(self, details=None):
+        return {
             'id': self.id,
             'name': self.name,
             'type': self.type,
             'enabled': self.enabled,
-            'last_sync_at': self.last_sync_at.isoformat() if self.last_sync_at else None,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'last_sync_at': _iso(self.last_sync_at),
+            'created_at': _iso(self.created_at),
+            'updated_at': _iso(self.updated_at),
+            'details': details or {},
         }
-        if include_details and details:
-            data['details'] = details
-        return data
 
 
 class Subnet(db.Model):
     __tablename__ = 'subnets'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False, unique=True)
-    cidr = db.Column(db.String(43), nullable=False, unique=True)  # Support IPv6
+    cidr = db.Column(db.String(43), nullable=False, unique=True)
     description = db.Column(db.Text)
     vlan = db.Column(db.Integer)
-    gateway = db.Column(db.String(45))  # Support IPv6
+    gateway = db.Column(db.String(45))
     dns_primary = db.Column(db.String(45))
     dns_secondary = db.Column(db.String(45))
-    location = db.Column(db.String(255))  # Physical/logical location
-    environment = db.Column(db.String(50))  # prod, dev, staging, etc.
-    tags = db.Column(db.Text)  # Comma-separated tags
+    location = db.Column(db.String(255))
+    environment = db.Column(db.String(50))
+    tags = db.Column(db.Text)  # comma-separated
+    scan_enabled = db.Column(db.Boolean)  # None = automatic (small IPv4 subnets only)
+    last_scan_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    ips = db.relationship('IP', backref='subnet', lazy=True, cascade='all, delete-orphan')
-    
+
+    ips = db.relationship('IP', backref='subnet', lazy=True, cascade='all, delete-orphan',
+                          passive_deletes=True)
+    dhcp_ranges = db.relationship('DhcpRange', backref='subnet', lazy=True,
+                                  cascade='all, delete-orphan', passive_deletes=True,
+                                  order_by='DhcpRange.id')
+
     __table_args__ = (
-        db.Index('idx_subnet_cidr', 'cidr'),
         db.Index('idx_subnet_vlan', 'vlan'),
         db.Index('idx_subnet_environment', 'environment'),
     )
-    
-    @staticmethod
-    def validate_cidr(cidr_str):
-        """Validate CIDR notation and return network object or raise ValueError"""
+
+    @property
+    def network(self):
+        return ipaddress.ip_network(self.cidr, strict=False)
+
+    def contains(self, address):
         try:
-            network = ipaddress.ip_network(cidr_str, strict=False)
-            return network
-        except ValueError as e:
-            raise ValueError(f"Invalid CIDR notation: {str(e)}")
-    
-    @staticmethod
-    def validate_ip(ip_str):
-        """Validate an IP address"""
-        try:
-            return ipaddress.ip_address(ip_str)
-        except ValueError as e:
-            raise ValueError(f"Invalid IP address: {str(e)}")
-    
-    def get_network(self):
-        """Get the ipaddress network object for this subnet"""
-        try:
-            return ipaddress.ip_network(self.cidr, strict=False)
-        except:
-            return None
-    
-    def contains_ip(self, ip_str):
-        """Check if an IP address is within this subnet"""
-        try:
-            network = self.get_network()
-            ip = ipaddress.ip_address(ip_str)
-            return ip in network
-        except:
+            return ipaddress.ip_address(address) in self.network
+        except ValueError:
             return False
-    
-    def get_available_ips(self, limit=100):
-        """Get a list of available IPs in the subnet (excluding used ones)"""
-        network = self.get_network()
-        if not network:
-            return []
-        
-        used_ips = {ip.address for ip in self.ips}
-        available = []
-        
-        # Skip network and broadcast for IPv4 /31 and larger
-        hosts = list(network.hosts()) if network.prefixlen < 31 else list(network)
-        
-        for ip in hosts:
-            if str(ip) not in used_ips:
-                available.append(str(ip))
-                if len(available) >= limit:
-                    break
-        
-        return available
-    
-    def get_next_available_ip(self):
-        """Get the next available IP in the subnet"""
-        available = self.get_available_ips(limit=1)
-        return available[0] if available else None
-    
-    def to_dict(self, include_ips=False):
-        network = self.get_network()
-        
-        if network:
-            if isinstance(network, ipaddress.IPv4Network):
-                first_ip = str(network.network_address)
-                last_ip = str(network.broadcast_address)
-                # For /31 and /32, all addresses are usable
-                if network.prefixlen >= 31:
-                    usable_ips = network.num_addresses
-                else:
-                    usable_ips = network.num_addresses - 2
-            else:
-                first_ip = str(network.network_address)
-                last_ip = str(network.broadcast_address)
-                usable_ips = min(network.num_addresses, 2**32)  # Cap display for large IPv6
-            prefix_length = network.prefixlen
-            netmask = str(network.netmask)
-        else:
-            first_ip = None
-            last_ip = None
-            usable_ips = 0
-            prefix_length = None
-            netmask = None
-        
-        used_ips = len(self.ips)
-        utilization = round((used_ips / usable_ips * 100), 1) if usable_ips > 0 else 0
-        
-        result = {
+
+    @property
+    def usable_count(self):
+        net = self.network
+        if net.version == 4 and net.prefixlen < 31:
+            return net.num_addresses - 2
+        return net.num_addresses
+
+    @property
+    def auto_scan(self):
+        """Whether the scheduler should ping-scan the whole subnet."""
+        if self.scan_enabled is not None:
+            return self.scan_enabled
+        net = self.network
+        return net.version == 4 and net.prefixlen >= 20
+
+    def reserved_addresses(self):
+        """Addresses next-free must never hand out: network, broadcast and gateway."""
+        net = self.network
+        reserved = set()
+        if net.version == 4 and net.prefixlen < 31:
+            reserved.update({net.network_address, net.broadcast_address})
+        if net.version == 6 and net.prefixlen < 127:
+            reserved.add(net.network_address)  # subnet-router anycast
+        if self.gateway:
+            try:
+                reserved.add(ipaddress.ip_address(self.gateway))
+            except ValueError:
+                pass
+        return reserved
+
+    def in_dhcp_range(self, address):
+        addr = ipaddress.ip_address(address)
+        return any(r.contains(addr) for r in self.dhcp_ranges)
+
+    def free_addresses(self, used, limit=50, max_checks=65536):
+        """Yield up to `limit` free addresses without materialising the network."""
+        reserved = self.reserved_addresses()
+        ranges = [(r.start_int, r.end_int) for r in self.dhcp_ranges]
+        found = []
+        net = self.network
+        address_cls = type(net.network_address)
+        first, last = int(net.network_address), int(net.broadcast_address)
+        for n, value in enumerate(range(first, last + 1)):
+            if n >= max_checks or len(found) >= limit:
+                break
+            addr = address_cls(value)
+            if addr in reserved or str(addr) in used:
+                continue
+            if any(lo <= value <= hi for lo, hi in ranges):
+                continue
+            found.append(str(addr))
+        return found
+
+    def to_dict(self, used_count=None, ip_count=None):
+        net = self.network
+        usable = self.usable_count
+        if used_count is None:
+            used_count = sum(1 for ip in self.ips if ip.status in USED_STATUSES)
+        if ip_count is None:
+            ip_count = len(self.ips)
+        return {
             'id': self.id,
             'name': self.name,
             'cidr': self.cidr,
+            'version': net.version,
             'description': self.description,
             'vlan': self.vlan,
             'gateway': self.gateway,
@@ -161,37 +170,70 @@ class Subnet(db.Model):
             'dns_secondary': self.dns_secondary,
             'location': self.location,
             'environment': self.environment,
-            'tags': self.tags.split(',') if self.tags else [],
-            'first_ip': first_ip,
-            'last_ip': last_ip,
-            'netmask': netmask,
-            'prefix_length': prefix_length,
-            'usable_ips': usable_ips,
-            'used_ips': used_ips,
-            'available_ips': usable_ips - used_ips,
-            'utilization': utilization,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+            'tags': [t for t in (self.tags or '').split(',') if t],
+            'first_ip': str(net.network_address),
+            'last_ip': str(net.broadcast_address),
+            'netmask': str(net.netmask),
+            'prefix_length': net.prefixlen,
+            'usable_ips': min(usable, MAX_JS_INT),
+            'ip_count': ip_count,
+            'used_ips': used_count,
+            'free_ips': min(max(usable - used_count, 0), MAX_JS_INT),
+            'utilization': round(used_count / usable * 100, 1) if usable else 0,
+            'scan_enabled': self.scan_enabled,
+            'auto_scan': self.auto_scan,
+            'last_scan_at': _iso(self.last_scan_at),
+            'dhcp_ranges': [r.to_dict() for r in self.dhcp_ranges],
+            'created_at': _iso(self.created_at),
+            'updated_at': _iso(self.updated_at),
         }
-        
-        if include_ips:
-            result['ips'] = sorted(
-                [ip.to_dict() for ip in self.ips],
-                key=lambda x: ip_sort_key(x['address'])
-            )
-        
-        return result
+
+
+class DhcpRange(db.Model):
+    __tablename__ = 'dhcp_ranges'
+
+    id = db.Column(db.Integer, primary_key=True)
+    subnet_id = db.Column(db.Integer, db.ForeignKey('subnets.id', ondelete='CASCADE'),
+                          nullable=False, index=True)
+    start_address = db.Column(db.String(45), nullable=False)
+    end_address = db.Column(db.String(45), nullable=False)
+    description = db.Column(db.String(255))
+
+    @property
+    def start_int(self):
+        return int(ipaddress.ip_address(self.start_address))
+
+    @property
+    def end_int(self):
+        return int(ipaddress.ip_address(self.end_address))
+
+    @property
+    def size(self):
+        return self.end_int - self.start_int + 1
+
+    def contains(self, addr):
+        return self.start_int <= int(addr) <= self.end_int
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'subnet_id': self.subnet_id,
+            'start': self.start_address,
+            'end': self.end_address,
+            'size': min(self.size, MAX_JS_INT),
+            'description': self.description,
+        }
 
 
 class IP(db.Model):
     __tablename__ = 'ips'
-    
+
     id = db.Column(db.Integer, primary_key=True)
-    address = db.Column(db.String(45), nullable=False)  # Support IPv6
+    address = db.Column(db.String(45), nullable=False)
     hostname = db.Column(db.String(255))
-    fqdn = db.Column(db.String(255))  # Fully qualified domain name
+    fqdn = db.Column(db.String(255))
     description = db.Column(db.Text)
-    subnet_id = db.Column(db.Integer, db.ForeignKey('subnets.id'), nullable=False)
+    subnet_id = db.Column(db.Integer, db.ForeignKey('subnets.id', ondelete='CASCADE'), nullable=False)
     status = db.Column(db.String(20), default='available')
     mac_address = db.Column(db.String(17))
     device_type = db.Column(db.String(100))
@@ -201,115 +243,124 @@ class IP(db.Model):
     owner = db.Column(db.String(255))
     department = db.Column(db.String(255))
     notes = db.Column(db.Text)
-    last_seen = db.Column(db.DateTime)  # For future ping/scan feature
+    last_seen = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Status options
-    STATUSES = ['available', 'in-use', 'reserved', 'blocked', 'dhcp', 'deprecated']
-    
+
+    # Fields a client may set; everything else is managed by the server
+    FIELDS = ('address', 'hostname', 'fqdn', 'description', 'status', 'mac_address',
+              'device_type', 'manufacturer', 'model', 'serial_number', 'owner',
+              'department', 'notes')
+
     __table_args__ = (
         db.UniqueConstraint('address', 'subnet_id', name='unique_ip_per_subnet'),
-        db.Index('idx_ip_address', 'address'),
         db.Index('idx_ip_status', 'status'),
         db.Index('idx_ip_hostname', 'hostname'),
+        db.Index('idx_ip_mac', 'mac_address'),
     )
-    
-    @staticmethod
-    def validate_mac(mac_str):
-        """Validate MAC address format"""
-        if not mac_str:
-            return None
-        
-        # Normalize MAC address
-        mac_clean = mac_str.upper().replace('-', ':').replace('.', ':')
-        
-        # Check various formats
-        patterns = [
-            r'^([0-9A-F]{2}:){5}[0-9A-F]{2}$',  # 00:11:22:33:44:55
-            r'^([0-9A-F]{2}-){5}[0-9A-F]{2}$',  # 00-11-22-33-44-55
-            r'^([0-9A-F]{4}\.){2}[0-9A-F]{4}$',  # 0011.2233.4455
-        ]
-        
-        # Try standard format
-        if re.match(r'^([0-9A-F]{2}:){5}[0-9A-F]{2}$', mac_clean):
-            return mac_clean
-        
-        # Try to parse and reformat
-        mac_digits = re.sub(r'[^0-9A-F]', '', mac_clean)
-        if len(mac_digits) == 12:
-            return ':'.join(mac_digits[i:i+2] for i in range(0, 12, 2))
-        
-        raise ValueError("Invalid MAC address format")
-    
+
     def to_dict(self):
-        return {
+        data = {field: getattr(self, field) for field in self.FIELDS}
+        data.update({
             'id': self.id,
-            'address': self.address,
-            'hostname': self.hostname,
-            'fqdn': self.fqdn,
-            'description': self.description,
             'subnet_id': self.subnet_id,
             'subnet_name': self.subnet.name if self.subnet else None,
             'subnet_cidr': self.subnet.cidr if self.subnet else None,
-            'status': self.status,
+            'last_seen': _iso(self.last_seen),
+            'created_at': _iso(self.created_at),
+            'updated_at': _iso(self.updated_at),
+        })
+        return data
+
+
+class Discovery(db.Model):
+    """A host seen on the network by a scan or connector, documented or not."""
+    __tablename__ = 'discoveries'
+
+    id = db.Column(db.Integer, primary_key=True)
+    subnet_id = db.Column(db.Integer, db.ForeignKey('subnets.id', ondelete='CASCADE'), nullable=False)
+    address = db.Column(db.String(45), nullable=False)
+    mac_address = db.Column(db.String(17))
+    hostname = db.Column(db.String(255))
+    vendor = db.Column(db.String(100))
+    source = db.Column(db.String(20), nullable=False, default='scan')
+    ignored = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    first_seen = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    last_seen = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    subnet = db.relationship('Subnet')
+
+    __table_args__ = (
+        db.UniqueConstraint('subnet_id', 'address', name='unique_discovery_per_subnet'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'subnet_id': self.subnet_id,
+            'subnet_name': self.subnet.name if self.subnet else None,
+            'subnet_cidr': self.subnet.cidr if self.subnet else None,
+            'address': self.address,
             'mac_address': self.mac_address,
-            'device_type': self.device_type,
-            'manufacturer': self.manufacturer,
-            'model': self.model,
-            'serial_number': self.serial_number,
-            'owner': self.owner,
-            'department': self.department,
-            'notes': self.notes,
-            'last_seen': self.last_seen.isoformat() if self.last_seen else None,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+            'hostname': self.hostname,
+            'vendor': self.vendor,
+            'source': self.source,
+            'ignored': self.ignored,
+            'first_seen': _iso(self.first_seen),
+            'last_seen': _iso(self.last_seen),
         }
-
-
-def ip_sort_key(ip_str):
-    """Generate a sortable key for IP addresses (works for IPv4 and IPv6)"""
-    try:
-        ip = ipaddress.ip_address(ip_str)
-        return (ip.version, int(ip))
-    except:
-        return (999, 0)  # Invalid IPs sort last
 
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
-    
+
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False, index=True)
-    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    is_admin = db.Column(db.Boolean, default=False)
+    role = db.Column(db.String(10), nullable=False, default='editor', server_default='editor')
     is_active = db.Column(db.Boolean, default=True)
+    session_version = db.Column(db.Integer, nullable=False, default=1, server_default='1')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     def set_password(self, password):
-        """Hash and set the password"""
         if len(password) < 8:
-            raise ValueError("Password must be at least 8 characters long")
+            raise ValueError('Password must be at least 8 characters')
         self.password_hash = generate_password_hash(password)
-    
+
     def check_password(self, password):
-        """Check if the provided password matches the hash"""
         return check_password_hash(self.password_hash, password)
-    
+
+    def has_role(self, role):
+        return ROLES.index(self.role) >= ROLES.index(role)
+
+    @property
+    def is_admin(self):
+        return self.role == 'admin'
+
+    def get_id(self):
+        # Bumping session_version logs out every session and remember cookie
+        return f'{self.id}:{self.session_version}'
+
     def to_dict(self):
         return {
             'id': self.id,
             'username': self.username,
             'email': self.email,
-            'is_admin': self.is_admin,
+            'role': self.role,
             'is_active': self.is_active,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+            'created_at': _iso(self.created_at),
         }
 
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    try:
+        uid, version = (int(part) for part in user_id.split(':'))
+    except ValueError:
+        return None
+    user = db.session.get(User, uid)
+    if not user or not user.is_active or user.session_version != version:
+        return None
+    return user

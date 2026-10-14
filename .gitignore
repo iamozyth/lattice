@@ -16,3 +16,4 @@ db_data/
 cookies.txt
 *.cookies
 .claude/skills/
+.venv/
