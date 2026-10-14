@@ -109,10 +109,11 @@ def create_app():
     app.template_folder = os.path.join(basedir, 'templates')
 
     # Configuration with secure defaults
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-        'DATABASE_URL',
-        'postgresql://localhost:5432/lattice'
-    )
+    database_url = os.environ.get('DATABASE_URL', 'postgresql://localhost:5432/lattice')
+    # SQLAlchemy 2.1 defaults postgresql:// to psycopg 3; we ship psycopg2
+    if database_url.startswith('postgresql://'):
+        database_url = 'postgresql+psycopg2://' + database_url[len('postgresql://'):]
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-prod')
 
