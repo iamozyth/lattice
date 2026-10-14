@@ -1,15 +1,10 @@
-#!/bin/bash
-
+#!/bin/sh
 set -e
 
-echo "[INFO] Lattice - Starting application..."
+echo "[lattice] Running database migrations"
+LATTICE_NO_SCHEDULER=1 flask db upgrade
 
-# Run database migrations
-echo "[INFO] Running database migrations..."
-flask db upgrade
-
-echo "[INFO] Migrations completed successfully"
-echo "[INFO] Starting Gunicorn server..."
-
-# Start Gunicorn with proper configuration
-exec gunicorn --bind 0.0.0.0:5000 --workers 2 --threads 4 --timeout 30 --access-logfile - --error-logfile - wsgi:app
+# One worker: the scheduler and scan jobs live in this process
+echo "[lattice] Starting server"
+exec gunicorn --bind 0.0.0.0:5000 --workers 1 --threads 8 --timeout 120 \
+    --access-logfile - --error-logfile - wsgi:app
