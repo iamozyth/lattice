@@ -2,7 +2,7 @@
 
 set -e
 
-echo "[INFO] NetDoc IPAM - Starting application..."
+echo "[INFO] Lattice - Starting application..."
 
 # Run database migrations
 echo "[INFO] Running database migrations..."

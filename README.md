@@ -1,285 +1,108 @@
-# NetDoc IPAM
+# lattice
 
-**Professional IP Address Management System**
+Self-hosted IP address management for homelabs and small networks. Flask, PostgreSQL, Docker.
 
-A self-hosted, Docker-based application for documenting and managing IP addresses, subnets, and network infrastructure.
+- Subnets in CIDR notation, IPv4 and IPv6, with VLAN, gateway, DNS, location and environment
+- IP records with hostname, FQDN, MAC, device, owner and status
+- Global search, IP lookup, next free IP, bulk add
+- Network discovery with nmap and periodic checks that keep `last_seen` current
+- UniFi connector to sync clients into your subnets, with a dry-run preview
+- JSON export and import for backups
+- REST API with Swagger UI
 
-![Version](https://img.shields.io/badge/version-1.0.0--beta.1-blue)
-![License](https://img.shields.io/badge/license-BSL%201.1-orange)
-![Docker](https://img.shields.io/badge/docker-ready-blue)
+## 1. Configure
 
-## 🚀 Features
-
-### Core Functionality
-- 🌐 **Subnet Management**: Create, edit, and delete subnets with CIDR notation (IPv4 & IPv6 support)
-- 📋 **IP Address Tracking**: Document IPs with comprehensive details including hostname, FQDN, MAC, device info, and ownership
-- 🔍 **Global Search**: Quickly find subnets and IPs across your entire network
-- 📊 **Dashboard Statistics**: Real-time overview of utilization, capacity, and distribution
-
-### Advanced Features
-- ✅ **IP Validation**: Automatic validation ensures IPs are within subnet range
-- 🔢 **Proper IP Sorting**: Numerically sorted IP addresses (192.168.1.2 < 192.168.1.10)
-- 🚫 **Duplicate Prevention**: Prevents duplicate IP entries per subnet
-- 🎯 **Next Available IP**: Automatically suggests the next available IP when adding
-- 📦 **Bulk Operations**: Add multiple IPs at once with CSV-style input
-- 💾 **Export/Import**: Full JSON export and import for backup and migration
-- 🔎 **IP Lookup**: Find which subnet contains any IP address
-
-### User Experience
-- 🎨 **Modern UI**: Clean, responsive interface built with Tailwind CSS
-- 🌓 **Environment Color Coding**: Visual distinction for prod/staging/dev/test
-- 📈 **Utilization Bars**: Visual progress indicators for subnet capacity
-- 🔔 **Toast Notifications**: Non-intrusive feedback for all actions
-- ⌨️ **Keyboard Shortcuts**: Ctrl+K for search, Ctrl+N for new subnet, Esc to close
-- 📱 **Mobile Responsive**: Works on all device sizes
-
-### Data Model
-- **Subnets**: Name, CIDR, VLAN, gateway, DNS, location, environment, tags
-- **IPs**: Address, hostname, FQDN, status, MAC, device type, manufacturer, model, owner, department, notes
-
-## 📖 Quick Start
-
-### Prerequisites
-- Docker and Docker Compose installed
-
-### Installation
-
-1. Clone or download the repository:
-```bash
-git clone <repository-url> netdoc-ipam
-cd netdoc-ipam
-```
-
-2. (Optional) Copy the environment template and set credentials locally (never commit the real .env). For Portainer stacks you can also set env vars directly in the UI:
-```bash
+```sh
 cp .env.example .env
-# edit .env with strong, org-approved values
-# generate a fresh password: openssl rand -base64 24
-# if your password contains @ / : or other special chars, URL-encode it before putting in DATABASE_URL
-```
-	- Portainer: either set the variables in the stack form or upload/place `.env` alongside the compose file.
-
-3. Start the application:
-```bash
-docker-compose up -d
 ```
 
-4. Open your browser: `http://localhost:5000`
+Fill in the secrets. Generate each one with `openssl rand -hex 32`.
 
-5. Start documenting your network!
+| Variable            | Default    | Description                                  |
+|---------------------|------------|----------------------------------------------|
+| `POSTGRES_PASSWORD` | (required) | Database password                            |
+| `SECRET_KEY`        | (required) | Signs login sessions                         |
+| `CONNECTOR_SECRET`  | (required) | Encrypts stored connector credentials        |
+| `POSTGRES_USER`     | `lattice`  | Database user                                |
+| `POSTGRES_DB`       | `lattice`  | Database name                                |
+| `WEB_PORT`          | `5001`     | Host port for the web UI                     |
 
-### Stopping the Application
+The database is only reachable on the internal Docker network.
 
-```bash
-docker-compose down
+## 2. Run
+
+```sh
+docker compose up -d
 ```
 
-### Updating
+Open http://localhost:5001. On first start you create the admin account.
 
-```bash
-docker-compose down
-docker-compose pull
-docker-compose build --no-cache
-docker-compose up -d
+To update:
+
+```sh
+git pull
+docker compose up -d --build
 ```
 
-## 🐳 Docker Configuration
+Database migrations run automatically on start.
 
-### Container Names
-- `ipam-web` - Web application server
-- `ipam-db` - PostgreSQL database
+## Network scanning
 
-### Volumes
-- `ipam_db_data` - Persistent database storage
+The container ships with nmap. From a subnet you can run:
 
-### Networks
-- `ipam-network` - Internal bridge network
+- **Ping scan**: fast discovery of live hosts (`nmap -sn`)
+- **Full scan**: adds OS and service detection (`nmap -sV -O`), slower
 
-### Exposure
-- Database is not published to the host; it is only reachable on the internal docker network (5432 exposed internally only)
+Discovered hosts come back as suggestions with reverse DNS, MAC, a guessed device type and a confidence score. Pick the ones you want and import them.
 
-### Environment Variables
+In the background, lattice checks every known IP every 6 hours and updates `last_seen`. Once a day it marks IPs not seen for 30 days as `deprecated`. Both intervals are set in `app/scheduler.py`.
 
-All sensitive values are loaded from `.env` (see `.env.example`).
+Notes:
 
-| Variable | Default (from docker-compose) | Description |
-|----------|------------------------------|-------------|
-| `POSTGRES_USER` | `netdoc_service` | Database role used by the app |
-| `POSTGRES_PASSWORD` | `S3cureNetdocP4ssw0rd2026` | Strong URL-safe placeholder (replace per deployment) |
-| `POSTGRES_DB` | `netdoc_prod` | Database name |
-| `DATABASE_URL` | `postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@ipam-db:5432/${POSTGRES_DB}` | Full connection string consumed by the app |
-| `FLASK_ENV` | `production` | Flask environment mode |
-| `FLASK_RUN_HOST` | `0.0.0.0` | Bind address inside the container |
+- The container can only scan networks it can reach. For a bridge network that usually means routed subnets work and layer-2 details like MAC addresses do not. Use `network_mode: host` if you need them.
+- OS detection needs raw sockets. Add `cap_add: [NET_RAW, NET_ADMIN]` to `lattice-web` if full scans fail.
+- Port scans may trigger IDS alerts. Tell your security team first.
 
-## 🔌 API Documentation
+## API
 
-**Complete API documentation is available via Swagger UI:**
+Every action in the UI is available over the REST API. Docs are at http://localhost:5001/openapi/swagger (or `/openapi/scalar`). All endpoints except initial setup and registration need a logged-in session.
+
+## Remote access
+
+Do not expose port 5001 directly to the internet. Put lattice behind a TLS reverse proxy, for example Caddy:
 
 ```
-http://localhost:5001/openapi/swagger
+ipam.example.com {
+    reverse_proxy 127.0.0.1:5001
+}
 ```
 
-The interactive Swagger UI allows you to:
-- ✅ View all 40 API endpoints
-- ✅ See request/response schemas
-- ✅ Test endpoints directly from the browser
-- ✅ View authentication requirements
-- ✅ Download OpenAPI specification (JSON)
+and bind the port to localhost by setting the `ports` entry in `docker-compose.yml` to `"127.0.0.1:5001:5000"`.
 
-Alternative API documentation viewer available at `/openapi/scalar`
+## Development
 
-### Quick API Overview
-
-**All endpoints require authentication (login first)** except:
-- `POST /api/auth/setup` - Initial system setup
-- `POST /api/auth/register` - User registration
-
-**Main endpoint categories:**
-- Statistics - Dashboard metrics
-- Subnets - Subnet management
-- IPs - IP address management  
-- Scanner - Network discovery
-- Import/Export - Data migration
-- Lookup - IP utilities
-- Authentication - User management
-
-## 📁 Project Structure
-
-```
-netdoc-ipam/
-├── app/
-│   ├── __init__.py          # Flask app factory
-│   ├── models.py            # Database models with validation
-│   ├── routes.py            # API and web routes
-│   ├── static/
-│   │   └── js/
-│   │       └── app.js       # Frontend JavaScript
-│   └── templates/
-│       └── index.html       # Web interface
-├── Dockerfile               # Container definition
-├── docker-compose.yml       # Multi-container setup
-├── requirements.txt         # Python dependencies
-└── README.md               # This file
-```
-
-## 🛠 Technology Stack
-
-| Component | Technology |
-|-----------|------------|
-| Backend | Python 3.11, Flask, SQLAlchemy |
-| Database | PostgreSQL 15 |
-| Frontend | HTML5, Tailwind CSS, Vanilla JS |
-| Server | Gunicorn WSGI |
-| Container | Docker & Docker Compose |
-
-## 📝 IP Statuses
-
-| Status | Description | Color |
-|--------|-------------|-------|
-| `available` | IP is free for allocation | Green |
-| `in-use` | IP is actively assigned | Blue |
-| `reserved` | IP is reserved for future use | Amber |
-| `blocked` | IP should not be used | Red |
-| `dhcp` | IP is managed by DHCP | Purple |
-| `deprecated` | IP is being phased out | Gray |
-
-## ⌨️ Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl/Cmd + K` | Focus global search |
-| `Ctrl/Cmd + N` | Open new subnet modal |
-| `Escape` | Close any open modal |
-
-## 🔧 Development
-
-### Local Development
-
-```bash
-# Create virtual environment
+```sh
 python -m venv venv
-source venv/bin/activate  # or `venv\Scripts\activate` on Windows
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Set environment variable
-export DATABASE_URL="postgresql://user:pass@localhost:5432/ipam_db"
-
-# Run development server
-flask run --debug
+source venv/bin/activate
+pip install -r requirements-dev.txt
+export DATABASE_URL=postgresql://user:pass@localhost:5432/lattice
+export SECRET_KEY=dev
+flask --app wsgi:app db upgrade
+flask --app wsgi:app run --debug
 ```
 
-### Building Custom Images
+## Upgrading from netdoc-ipam
 
-```bash
-docker-compose build --no-cache
+The data volume keeps its old name `ipam-db-data`, so your data stays. The defaults changed, though. Put your old values in `.env`:
+
+```
+POSTGRES_USER=netdoc_service
+POSTGRES_DB=netdoc_prod
+POSTGRES_PASSWORD=<your old password>
 ```
 
-## 🔒 Security Considerations
+Connector credentials were encrypted with a fallback key. After setting `CONNECTOR_SECRET`, enter them again under Settings → Connectors.
 
-- Change default database credentials in production
-- Use environment variables for sensitive configuration
-- Consider placing behind a reverse proxy with HTTPS
-- Implement authentication for production deployments
-- Store secrets only in `.env` (never commit it) and rotate the database password regularly
-
-## 📊 Version History
-
-### v2.0.0 (Current)
-- Complete UI redesign with dashboard
-- IPv6 support
-- IP validation and duplicate prevention
-- Bulk operations
-- Export/Import functionality
-- IP Lookup feature
-- Environment and location tracking
-- Toast notifications
-- Keyboard shortcuts
-- Mobile responsive design
-- Gunicorn production server
-- Professional branding (NetDoc IPAM)
-
-### v1.0.0
-- Initial release
-- Basic subnet and IP management
-- Search functionality
-- Docker deployment
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit issues and pull requests.
-
-## 📄 License
-
-**Business Source License 1.1 (BSL 1.1)**
-
-This project is licensed under the Business Source License 1.1, with the Change Date set to January 25, 2030.
-
-### What This Means
-
-✅ **You CAN:**
-- Use NetDoc IPAM for non-commercial purposes (internal use, research, evaluation)
-- Modify the source code for your own non-commercial use
-- Deploy it internally for your organization
-- Contribute improvements back to the project
-
-❌ **You CANNOT:**
-- Use it for commercial purposes without a commercial license
-- Offer it as a service to customers or clients
-- Resell it or bundle it with commercial products
-- Generate revenue directly or indirectly from it
-
-### Commercial Licensing
-
-If you want to use NetDoc IPAM commercially or in a production SaaS environment, please contact the licensor for a commercial license agreement.
-
-### Automatic Conversion
-
-On **January 25, 2030**, this license will automatically convert to **Apache License 2.0** (fully open source with no commercial restrictions).
-
----
-
-**NetDoc IPAM** - Professional IP Address Management for Modern Networks
+## License
 
 MIT

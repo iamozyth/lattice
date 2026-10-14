@@ -1,5 +1,5 @@
 """
-Authentication routes for NetDoc IPAM
+Authentication routes for Lattice
 """
 from flask import request
 from flask_login import login_user, logout_user, login_required, current_user
@@ -661,8 +661,8 @@ def get_version():
     from app import VERSION
     return {
         'version': VERSION,
-        'name': 'NetDoc IPAM',
-        'repository': 'https://github.com/iamozyth/netdoc-ipam'
+        'name': 'Lattice',
+        'repository': 'https://github.com/iamozyth/lattice'
     }, 200
 
 

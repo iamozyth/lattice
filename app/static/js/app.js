@@ -1,5 +1,5 @@
 // ============================================================================
-// NetDoc IPAM - IP Address Management System
+// Lattice - IP Address Management System
 // Version 2.0.0
 // ============================================================================
 
@@ -309,7 +309,7 @@ async function handleSetup(event) {
             currentUser = data.user;
             hideModal('setupModal');
             document.getElementById('setupForm').reset();
-            showToast('Admin account created successfully! Welcome to NetDoc IPAM!', 'success');
+            showToast('Admin account created successfully! Welcome to Lattice!', 'success');
             loadSubnets();
             loadStats();
         }

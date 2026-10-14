@@ -92,11 +92,11 @@ def create_app():
     app = OpenAPI(
         __name__,
         info={
-            'title': 'NetDoc IPAM API',
-            'version': '2.0.0',
+            'title': 'Lattice API',
+            'version': VERSION,
             'description': 'IP Address Management System API Documentation',
             'contact': {
-                'name': 'NetDoc IPAM Support',
+                'name': 'Lattice',
             }
         }
     )
@@ -111,7 +111,7 @@ def create_app():
     # Configuration with secure defaults
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
         'DATABASE_URL',
-        'postgresql://ipam_user:ipam_secure_pass@localhost:5432/ipam_db'
+        'postgresql://localhost:5432/lattice'
     )
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-prod')

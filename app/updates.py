@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
-GITHUB_REPO = 'iamozyth/netdoc-ipam'
+GITHUB_REPO = 'iamozyth/lattice'
 GITHUB_API_URL = f'https://api.github.com/repos/{GITHUB_REPO}/releases/latest'
 GITHUB_API_LIST_URL = f'https://api.github.com/repos/{GITHUB_REPO}/releases'
 
@@ -19,7 +19,7 @@ def _auth_headers():
     token = os.environ.get('GITHUB_TOKEN') or os.environ.get('GITHUB_PAT')
     headers = {
         'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'netdoc-ipam-update-checker'
+        'User-Agent': 'lattice-update-checker'
     }
     if token:
         headers['Authorization'] = f'Bearer {token}'

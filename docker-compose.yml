@@ -1,45 +1,42 @@
 services:
-  ipam-db:
+  lattice-db:
     image: postgres:15-alpine
-    container_name: ipam-db
+    container_name: lattice-db
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-netdoc_service}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-NetDoc2026SecurePass9X7Z}
-      POSTGRES_DB: ${POSTGRES_DB:-netdoc_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-lattice}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-lattice}
     expose:
       - "5432"
     volumes:
-      - ipam_db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql/data
     networks:
-      - ipam-network
+      - lattice
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-netdoc_service} -d ${POSTGRES_DB:-netdoc_prod}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lattice} -d ${POSTGRES_DB:-lattice}"]
       interval: 5s
       timeout: 5s
       retries: 10
       start_period: 10s
     restart: unless-stopped
 
-  ipam-web:
+  lattice-web:
     build: .
-    image: netdoc-ipam:latest
-    container_name: ipam-web
+    image: lattice:latest
+    container_name: lattice-web
     ports:
-      - "0.0.0.0:5001:5000"
+      - "${WEB_PORT:-5001}:5000"
     environment:
       FLASK_ENV: ${FLASK_ENV:-production}
-      FLASK_RUN_HOST: 0.0.0.0
-      POSTGRES_USER: ${POSTGRES_USER:-netdoc_service}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-NetDoc2026SecurePass9X7Z}
-      POSTGRES_DB: ${POSTGRES_DB:-netdoc_prod}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-netdoc_service}:${POSTGRES_PASSWORD:-NetDoc2026SecurePass9X7Z}@ipam-db:5432/${POSTGRES_DB:-netdoc_prod}}
-      # Encryption key for connector credentials (use a strong 32-byte urlsafe base64 key)
-      CONNECTOR_SECRET: ${CONNECTOR_SECRET:-}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-lattice}:${POSTGRES_PASSWORD}@lattice-db:5432/${POSTGRES_DB:-lattice}
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+      # Encrypts stored connector credentials
+      CONNECTOR_SECRET: ${CONNECTOR_SECRET:?set CONNECTOR_SECRET in .env}
     depends_on:
-      ipam-db:
+      lattice-db:
         condition: service_healthy
     networks:
-      - ipam-network
+      - lattice
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
@@ -49,10 +46,10 @@ services:
     restart: unless-stopped
 
 volumes:
-  ipam_db_data:
+  db_data:
+    # Name kept from netdoc-ipam so existing installs keep their data
     name: ipam-db-data
 
 networks:
-  ipam-network:
-    name: ipam-network
-    driver: bridge
+  lattice:
+    name: lattice

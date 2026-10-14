@@ -54,7 +54,7 @@ class UniFiConnector(Connector):
         self.session = requests.Session()
         self.session.verify = self.verify_ssl
         headers = {
-            "User-Agent": "NetDoc-IPAM/1.0",
+            "User-Agent": "Lattice/1.0",
             "Accept": "application/json",
         }
 
