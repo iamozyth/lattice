@@ -23,6 +23,7 @@ services:
   lattice-web:
     build: .
     image: lattice:latest
+    pull_policy: build
     container_name: lattice-web
     ports:
       - "${WEB_PORT:-5001}:5000"
