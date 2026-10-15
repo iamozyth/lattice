@@ -15,6 +15,7 @@ from app import VERSION, db, hierarchy, limiter
 from app.auth import require_role
 from app.catalog import tag_filter, vlan_by_number
 from app.models import IP, USED_STATUSES, Discovery, DhcpRange, Subnet, Tag, Vlan
+from app.scanner import scan_jobs
 from app.validation import (ValidationError, apply, check_ip_in_subnet, check_subnet,
                             dhcp_range_fields, ip_fields, normalize_ip,
                             subnet_fields)
@@ -190,7 +191,7 @@ def get_subnet(path: SubnetPath):
     subnet, err = _subnet_or_404(path.subnet_id)
     if err:
         return err
-    return _with_parent(subnet, _subnet_dict(subnet))
+    return {**_with_parent(subnet, _subnet_dict(subnet)), 'scan_job_id': scan_jobs.running_for(subnet.id)}
 
 
 @api_bp.post('/subnets', tags=[tag_subnets])
@@ -291,10 +292,13 @@ def subnet_map(path: SubnetPath):
         child = next((c for cnet, c in children if addr in cnet), None)
         if child:
             cell.update(state='child', child_id=child.id, hostname=f'{child.name} ({child.cidr})')
+        elif key == subnet.gateway:
+            # Stays a gateway when the router is also documented or seen by a scan
+            cell['state'] = 'gateway'
+            if ip:
+                cell.update(id=ip.id, hostname=ip.hostname)
         elif ip:
             cell.update(state=ip.status, id=ip.id, hostname=ip.hostname)
-        elif key == subnet.gateway:
-            cell['state'] = 'gateway'
         elif addr in reserved:
             cell['state'] = 'reserved-net'
         elif key in discovered:

@@ -126,6 +126,9 @@ def scan_status(path: JobPath):
         return {'error': 'Scan not found or expired'}, 404
     if job['status'] == 'completed':
         documented = {ip.address for ip in IP.query.filter_by(subnet_id=job['subnet_id'])}
+        subnet = db.session.get(Subnet, job['subnet_id'])
+        if subnet and subnet.gateway:
+            documented.add(subnet.gateway)
         for host in job['discovered']:
             host['documented'] = host['address'] in documented
     return job
@@ -179,7 +182,10 @@ def drift_report(stale_days):
     undocumented = (
         Discovery.query
         .outerjoin(IP, and_(IP.subnet_id == Discovery.subnet_id, IP.address == Discovery.address))
-        .filter(IP.id.is_(None), Discovery.ignored.is_(False))
+        .join(Subnet, Subnet.id == Discovery.subnet_id)
+        # The subnet's gateway is known infrastructure, documented or not
+        .filter(IP.id.is_(None), Discovery.ignored.is_(False),
+                or_(Subnet.gateway.is_(None), Discovery.address != Subnet.gateway))
         .order_by(Discovery.last_seen.desc())
         .limit(1000).all()
     )
