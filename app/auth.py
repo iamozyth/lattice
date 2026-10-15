@@ -1,7 +1,7 @@
 """Authentication, roles and user management."""
 from functools import wraps
 
-from flask import request
+from flask import request, session
 from flask_login import current_user, login_required, login_user, logout_user
 from flask_openapi3 import APIBlueprint, Tag
 from pydantic import BaseModel
@@ -62,6 +62,7 @@ def status():
     return {
         'needs_setup': db.session.query(func.count(User.id)).scalar() == 0,
         'user': current_user.to_dict() if current_user.is_authenticated else None,
+        'via': session.get('via', 'local') if current_user.is_authenticated else None,
         'version': VERSION,
     }
 
@@ -97,6 +98,9 @@ def setup():
 @auth_bp.post('/login', tags=[tag])
 @limiter.limit('10 per minute')
 def login():
+    from app.sso import local_login_allowed, settings
+    if not local_login_allowed():
+        return {'error': f"Sign in with {settings()['name']}"}, 403
     data = _json()
     user = User.query.filter_by(username=_clean(data.get('username'), 80)).first()
     if not user or not user.check_password(data.get('password') or ''):
@@ -109,8 +113,11 @@ def login():
 
 @auth_bp.post('/logout', tags=[tag])
 def logout():
-    logout_user()
-    return {'ok': True}
+    from app.sso import logout_redirect
+    to = logout_redirect()  # also end the provider session after an SSO sign-in
+    session.clear()
+    logout_user()  # after clear(): it marks the remember-me cookie for deletion
+    return {'ok': True, 'redirect': to}
 
 
 @auth_bp.post('/password', tags=[tag])

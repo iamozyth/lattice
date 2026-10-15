@@ -29,7 +29,7 @@ export function icon(name, size = 15) {
   svg.setAttribute('height', size);
   svg.setAttribute('aria-hidden', 'true');
   const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-  use.setAttribute('href', `#i-${name}`);
+  use.setAttribute('href', `#pg-${name}`);
   svg.append(use);
   return svg;
 }
@@ -48,7 +48,8 @@ export function debounce(fn, ms = 250) {
 }
 
 export function toast(message, kind = 'ok', ms = 4000) {
-  const el = h('div.toast', { class: kind === 'ok' ? '' : kind }, message);
+  const el = h('div.toast', { class: kind === 'ok' ? '' : kind },
+    icon(kind === 'ok' ? 'check' : 'alert', 16), h('span', {}, message));
   document.getElementById('toasts').append(el);
   setTimeout(() => el.remove(), kind === 'error' ? ms * 2 : ms);
 }
@@ -94,7 +95,7 @@ export function empty(title, text) {
 
 // Page heading: title, a muted summary and actions on the right
 export function pageHead(title, meta, ...actions) {
-  return h('div.head', {}, h('h2', {}, title), meta ? h('span.meta', {}, meta) : null,
+  return h('div.head', {}, title ? h('h2', {}, title) : null, meta ? h('span.meta', {}, meta) : null,
     actions.some(Boolean) ? h('div.actions', {}, ...actions) : null);
 }
 

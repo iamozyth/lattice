@@ -1,12 +1,13 @@
 import json
 import logging
 import os
+import time
 from datetime import datetime, timedelta
 
-from flask import jsonify, redirect, request
+from flask import jsonify, redirect, request, session
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_login import LoginManager, current_user
+from flask_login import LoginManager, current_user, logout_user
 from flask_openapi3 import OpenAPI
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.exceptions import HTTPException
@@ -87,7 +88,11 @@ def create_app(config=None):
         REMEMBER_COOKIE_DURATION=timedelta(days=30),
         SCAN_INTERVAL_HOURS=float(os.environ.get('SCAN_INTERVAL_HOURS', 6)),
         STALE_DAYS=int(os.environ.get('STALE_DAYS', 30)),
+        HISTORY_DAYS=int(os.environ.get('HISTORY_DAYS', 365)),
         SCHEDULER_ENABLED=not _env_bool('LATTICE_NO_SCHEDULER'),
+        # Allow an http:// identity provider on a private network (development)
+        OIDC_ALLOW_HTTP=_env_bool('OIDC_ALLOW_HTTP'),
+        PERMANENT_SESSION_LIFETIME=timedelta(days=7),
         RATELIMIT_ENABLED=True,
     )
     if config:
@@ -107,6 +112,13 @@ def create_app(config=None):
     @login_manager.unauthorized_handler
     def unauthorized():
         return jsonify({'error': 'Login required', 'code': 'AUTH_REQUIRED'}), 401
+
+    @app.before_request
+    def end_expired_sso_session():
+        until = session.get('sso_until')
+        if until and time.time() > until:
+            session.clear()
+            logout_user()
 
     @app.before_request
     def docs_need_login():
@@ -165,15 +177,24 @@ def create_app(config=None):
         return jsonify({'error': 'Internal server error'}), 500
 
     from app.auth import auth_bp
+    from app.sso import sso_bp  # adds /api/auth/config to auth_bp, so before register_api
     from app.connectors.routes import connectors_bp
     from app.discovery import discovery_bp
+    from app.activity import activity_bp
+    from app.catalog import catalog_bp
+    from app.bulk import bulk_bp
+    from app import history  # noqa: F401  registers the change listeners
     from app.routes import api_bp, main_bp
 
     app.register_api(auth_bp)
     app.register_api(api_bp)
     app.register_api(discovery_bp)
     app.register_api(connectors_bp)
+    app.register_api(activity_bp)
+    app.register_api(catalog_bp)
+    app.register_api(bulk_bp)
     app.register_blueprint(main_bp)
+    app.register_blueprint(sso_bp)
 
     from flask_migrate import Migrate
     Migrate(app, db)

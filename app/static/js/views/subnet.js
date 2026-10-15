@@ -1,13 +1,14 @@
 import { del, get, post } from '../api.js';
 import { ago, busy, confirmDialog, h, icon, mount, pageHead, toast, utilBar } from '../dom.js';
-import { bulkDialog, dhcpDialog, subnetDialog } from '../forms.js';
+import { bulkDialog, dhcpDialog, subnetDialog, tagPills } from '../forms.js';
 import { refreshDriftCount } from '../main.js';
 import { can } from '../state.js';
+import { changeList } from './changes.js';
 import { ipTable } from './iptable.js';
 
 const LEGEND = [
   ['in-use', 'In use'], ['reserved', 'Reserved'], ['dhcp', 'DHCP lease'], ['gateway', 'Gateway'],
-  ['undocumented', 'Seen, not documented'], ['free', 'Free'], ['free pool', 'DHCP pool'],
+  ['undocumented', 'Seen, not documented'], ['free', 'Free'], ['free pool', 'DHCP pool'], ['child', 'Child subnet'],
 ];
 
 export async function render(root, [id]) {
@@ -21,6 +22,8 @@ export async function render(root, [id]) {
   const infoPanel = h('section.panel');
   const dhcpPanel = h('section.panel');
   const scanPanel = h('section.panel');
+  const insidePanel = h('section.panel');
+  const activityPanel = h('section.panel');
   const head = h('div');
 
   async function refresh() {
@@ -28,13 +31,23 @@ export async function render(root, [id]) {
     drawHead();
     drawInfo();
     drawDhcp();
-    await drawMap();
+    await Promise.all([drawMap(), drawInside(), drawActivity()]);
+  }
+
+  async function drawActivity() {
+    const { items } = await get(`/api/changes?subnet_id=${id}&limit=8`);
+    mount(activityPanel,
+      h('div.panel-head', {}, h('h3', {}, 'Activity'),
+        h('div.actions', {}, h('a.btn.sm', { href: `#/activity?subnet_id=${id}` }, 'All'))),
+      items.length ? changeList(items) : h('div.pad.note', {}, 'No changes recorded yet.'));
   }
 
   function drawHead() {
-    const meta = [subnet.cidr, subnet.vlan && `VLAN ${subnet.vlan}`, subnet.environment].filter(Boolean).join(' · ');
+    const meta = [subnet.cidr, subnet.vlan && (subnet.vlan_name === `VLAN ${subnet.vlan}` ? subnet.vlan_name : `VLAN ${subnet.vlan} ${subnet.vlan_name}`), subnet.environment].filter(Boolean).join(' · ');
     mount(head,
-      h('a.back', { href: '#/subnets' }, '← Subnets'),
+      subnet.inside
+        ? h('a.back', { href: `#/subnets/${subnet.inside.id}` }, `← ${subnet.inside.name}`)
+        : h('a.back', { href: '#/subnets' }, '← Subnets'),
       pageHead(subnet.name, meta, ...(can('editor') ? [
         h('button.primary', { onclick: () => table.add() }, 'Add address'),
         h('button', { onclick: async () => { if (await bulkDialog(subnet)) { await table.load(); refresh(); } } }, 'Bulk add'),
@@ -45,8 +58,11 @@ export async function render(root, [id]) {
 
   async function removeSubnet() {
     const n = subnet.ip_count;
-    const ok = await confirmDialog(`Delete ${subnet.name}?`,
-      `This deletes the subnet${n ? ` and its ${n} documented address${n === 1 ? '' : 'es'}` : ''}, DHCP ranges and scan history. Export first if you might need it.`);
+    const addresses = `${n} documented address${n === 1 ? '' : 'es'}`;
+    const text = subnet.inside
+      ? `${n ? `Its ${addresses} move to ${subnet.inside.name}. ` : ''}Its DHCP ranges are removed.`
+      : `This deletes the subnet${n ? ` and its ${addresses}` : ''}, DHCP ranges and scan history. Export first if you might need it.`;
+    const ok = await confirmDialog(`Delete ${subnet.name}?`, text);
     if (!ok) return;
     await busy(null, async () => {
       await del(`/api/subnets/${id}`);
@@ -63,13 +79,14 @@ export async function render(root, [id]) {
       ['Gateway', subnet.gateway, true],
       ['DNS', [subnet.dns_primary, subnet.dns_secondary].filter(Boolean).join(', '), true],
       ['Location', subnet.location],
-      ['Tags', subnet.tags.length ? subnet.tags.map((t) => h('span.tag', {}, t)) : null],
+      ['Tags', subnet.tags.length ? h('span.row', {}, tagPills(subnet.tags, '#/subnets')) : null],
       ['Last scan', subnet.last_scan_at ? ago(subnet.last_scan_at) : 'never'],
       ['Auto scan', subnet.auto_scan ? 'whole subnet' : 'documented IPs only'],
     ].filter((r) => r && r[1] && (!Array.isArray(r[1]) || r[1].length));
     mount(infoPanel,
       h('div.panel-head', {}, h('h3', {}, 'Details'),
-        subnet.version === 4 ? h('div.actions', {}, utilBar(subnet.utilization)) : null),
+        subnet.children ? h('div.actions', { title: 'Allocated to subnets' }, utilBar(subnet.allocated))
+          : subnet.version === 4 ? h('div.actions', { title: 'Addresses in use' }, utilBar(subnet.utilization)) : null),
       h('div.pad.stack', {},
         h('dl.meta-list', {}, rows.map(([k, v, mono]) => [h('dt', {}, k), h('dd', { class: mono ? 'mono' : '' }, v)])),
         subnet.description ? h('div.muted', {}, subnet.description) : null,
@@ -90,7 +107,7 @@ export async function render(root, [id]) {
             h('button.ghost.icon.danger.hover', { 'aria-label': 'Delete range', onclick: async (e) => {
               if (!(await confirmDialog('Delete DHCP range?', `${r.start} – ${r.end} will no longer be skipped by next free.`))) return;
               await busy(e.currentTarget, async () => { await del(`/api/dhcp-ranges/${r.id}`); refresh(); });
-            } }, icon('trash'))] : null)))))
+            } }, icon('delete'))] : null)))))
         : h('div.pad.muted', {}, 'No pools. Add your router\'s DHCP range so next free never hands out a leased address.'));
   }
 
@@ -112,13 +129,45 @@ export async function render(root, [id]) {
         return cell;
       }));
     mount(mapPanel,
-      h('div.panel-head', {}, h('h3', {}, 'Map'), h('span.meta', {}, `${subnet.used_ips} used · ${subnet.free_ips} free`)),
+      h('div.panel-head', {}, h('h3', {}, 'Map'), h('span.meta', {}, subnet.children
+        ? `${subnet.children} subnet${subnet.children === 1 ? '' : 's'} · ${Math.round(100 - subnet.allocated)}% unallocated`
+        : `${subnet.used_ips} used · ${subnet.free_ips} free`)),
       h('div.pad', {}, grid,
         h('div.map-foot', {}, tip, h('div.legend', {}, LEGEND.map(([cls, text]) => h('span', {},
           h('span.cell', { class: cls.split(' ').map((c, i) => (i ? c : `st-${c}`)).join(' ') }), text))))));
   }
 
+  // Child subnets and the space still free, with a shortcut to carve a new one
+  async function drawInside() {
+    const net = subnet.prefix_length;
+    const room = subnet.version === 4 ? net < 30 : net < 126;
+    const [list, free] = await Promise.all([get('/api/subnets'), room ? get(`/api/subnets/${id}/free-blocks`) : { free: [] }]);
+    const kids = list.items.filter((x) => x.parent_id === subnet.id);
+    if (!kids.length && !(can('editor') && room)) { insidePanel.classList.add('hidden'); return; }
+    insidePanel.classList.remove('hidden');
+    const carve = (cidr) => async () => {
+      const made = await subnetDialog(null, { subnets: list.items, parentId: subnet.id, cidr });
+      if (made) location.hash = `#/subnets/${made.id}`;
+    };
+    const rows = [
+      ...kids.map((k) => h('tr.link', { onclick: () => { location.hash = `#/subnets/${k.id}`; } },
+        h('td', {}, h('a', { href: `#/subnets/${k.id}` }, k.name)),
+        h('td.mono', {}, k.cidr),
+        h('td', {}, k.version === 4 ? utilBar(k.utilization) : null))),
+      ...(kids.length ? free.free.slice(0, 6) : []).map((cidr) => h('tr', {},
+        h('td.faint', {}, 'Free'), h('td.mono.muted', {}, cidr),
+        h('td.actions', {}, can('editor') ? h('button.ghost.sm', { onclick: carve(cidr) }, 'Add subnet') : null))),
+    ];
+    mount(insidePanel,
+      h('div.panel-head', {}, h('h3', {}, 'Inside this subnet'),
+        h('span.meta', {}, kids.length ? `${kids.length} subnet${kids.length === 1 ? '' : 's'}` : 'No subnets yet'),
+        can('editor') && room ? h('div.actions', {}, h('button.sm', { onclick: carve('') }, 'Add subnet')) : null),
+      rows.length ? h('div.table-wrap', {}, h('table', {}, h('tbody', {}, rows)))
+        : h('div.pad.note', {}, 'Split this range into smaller subnets, for example one per VLAN. Addresses already documented move along.'));
+  }
+
   async function onCell(c) {
+    if (c.state === 'child') { location.hash = `#/subnets/${c.child_id}`; return; }
     if (c.state === 'reserved-net' || !can('editor')) return;
     if (c.id) { await table.edit(await get(`/api/ips/${c.id}`)); return; }
     if (c.state === 'gateway') { toast(`${c.address} is the gateway`); return; }
@@ -197,13 +246,16 @@ export async function render(root, [id]) {
     table.el);
 
   mount(root, head, h('div.cols', {},
-    h('div.stack', {}, mapPanel, addresses),
-    h('div.stack', {}, infoPanel, dhcpPanel, scanPanel)));
+    h('div.stack', {}, mapPanel, insidePanel, addresses),
+    h('div.stack', {}, infoPanel, dhcpPanel, scanPanel, activityPanel)));
   drawHead();
   drawInfo();
   drawDhcp();
   drawScanIdle();
-  await Promise.all([drawMap(), table.load()]);
+  await Promise.all([drawMap(), drawInside(), drawActivity(), table.load()]);
 
-  return () => clearTimeout(pollTimer);
+  // "Add address to this subnet" from the command palette
+  const onAction = (e) => { if (e.detail === 'add-address') table.add(); };
+  window.addEventListener('lattice:action', onAction);
+  return () => { clearTimeout(pollTimer); window.removeEventListener('lattice:action', onAction); };
 }

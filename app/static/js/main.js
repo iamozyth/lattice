@@ -1,12 +1,17 @@
 import { get, post } from './api.js';
 import { $, $$, debounce, mount, h, toast } from './dom.js';
 import { state, can } from './state.js';
+import { initPalette, openPalette } from './palette.js';
+
+const AREAS = { subnets: 'Subnets', addresses: 'Addresses', drift: 'Drift', vlans: 'VLANs', activity: 'Activity', connectors: 'Connectors', settings: 'Settings' };
 
 const routes = [
   [/^#\/subnets\/(\d+)$/, () => import('./views/subnet.js'), 'subnets'],
   [/^#\/subnets$/, () => import('./views/subnets.js'), 'subnets'],
   [/^#\/addresses$/, () => import('./views/addresses.js'), 'addresses'],
   [/^#\/drift$/, () => import('./views/drift.js'), 'drift'],
+  [/^#\/activity$/, () => import('./views/activity.js'), 'activity'],
+  [/^#\/vlans$/, () => import('./views/vlans.js'), 'vlans'],
   [/^#\/connectors$/, () => import('./views/connectors.js'), 'connectors'],
   [/^#\/settings$/, () => import('./views/settings.js'), 'settings'],
 ];
@@ -31,8 +36,10 @@ async function route() {
     if (a.dataset.nav === nav) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   });
-  if (nav !== 'addresses') $('#search').value = '';
-  mount(view, h('p.muted', {}, 'loading…'));
+  $('#area-name').textContent = AREAS[nav];
+  $('#area-icon').setAttribute('href', `#pg-${nav}`);
+  document.title = `${AREAS[nav]} · lattice`;
+  mount(view, h('div.stack', {}, h('span.skeleton'), h('span.skeleton'), h('span.skeleton')));
   try {
     const mod = await load();
     if (id !== renderId) return;
@@ -58,33 +65,37 @@ async function init() {
   if (!status.user) { location.href = '/login'; return; }
   state.user = status.user;
   state.version = status.version;
-  $('#who').textContent = state.user.username;
+  state.via = status.via;
+  $('#me').textContent = state.user.username;
+  $('#me-initial').textContent = state.user.username.slice(0, 1);
+  $('#me-role').textContent = state.user.role;
+  $('#version').textContent = status.version;
+  $('#me-sso').toggleAttribute('hidden', status.via !== 'sso'); // SVG has no .hidden property
   $$('[data-role]').forEach((el) => el.classList.toggle('hidden', !can(el.dataset.role)));
 
   document.addEventListener('click', async (e) => {
     const target = e.target.closest('[data-action]');
     if (!target) return;
     if (target.dataset.action === 'logout') {
-      await post('/api/auth/logout').catch(() => {});
-      location.href = '/login';
+      const out = await post('/api/auth/logout').catch(() => ({}));
+      location.href = out?.redirect || '/login'; // after SSO: end the provider session too
     }
   });
 
-  const search = $('#search');
-  const goSearch = debounce(() => {
-    const q = search.value.trim();
-    const target = q ? `#/addresses?search=${encodeURIComponent(q)}` : '#/addresses';
-    if (location.hash !== target) location.hash = target;
-  }, 300);
-  search.addEventListener('input', goSearch);
-  $('#search-form').addEventListener('submit', (e) => { e.preventDefault(); goSearch(); });
+  initPalette();
+  $('#palette-open').addEventListener('click', openPalette);
+  if (/Mac|iPhone|iPad/.test(navigator.platform)) $('#palette-key').textContent = '⌘K';
 
-  document.addEventListener('keydown', (e) => {
-    const typing = e.target.closest('input, textarea, select, [contenteditable]');
-    if (e.key === '/' && !typing && !document.querySelector('dialog[open]')) {
-      e.preventDefault();
-      search.focus();
-      search.select();
+  // Actions from the palette that aren't tied to the open page
+  window.addEventListener('lattice:action', async (e) => {
+    if (e.detail === 'new-subnet') {
+      const { subnetDialog } = await import('./forms.js');
+      const list = await get('/api/subnets');
+      const s = await subnetDialog(null, { environments: list.environments, subnets: list.items });
+      if (s) location.hash = `#/subnets/${s.id}`;
+    } else if (e.detail === 'import-csv') {
+      const { csvImportDialog } = await import('./views/csvimport.js');
+      if (await csvImportDialog('ips')) route();
     }
   });
 

@@ -80,3 +80,13 @@ def test_security_headers(admin):
     csp = resp.headers['Content-Security-Policy']
     assert "script-src 'self'" in csp and 'unsafe-inline' not in csp
     assert 'Access-Control-Allow-Origin' not in resp.headers
+
+
+def test_logout_also_ends_remember_me(app):
+    make_user(app, 'rita', 'editor')
+    c = Client(app.test_client())
+    assert c.post('/api/auth/login', {'username': 'rita', 'password': 'password123', 'remember': True}).status_code == 200
+    assert c.c.get_cookie('remember_token') is not None
+    c.post('/api/auth/logout')
+    assert c.c.get_cookie('remember_token') is None
+    assert c.get('/api/subnets').status_code == 401

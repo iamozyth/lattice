@@ -1,25 +1,33 @@
 import { get } from '../api.js';
-import { $, h, mount, pageHead, status } from '../dom.js';
+import { debounce, h, mount, pageHead, status } from '../dom.js';
 import { can } from '../state.js';
+import { csvImportDialog } from './csvimport.js';
 import { ipTable } from './iptable.js';
 
 const IP_RE = /^(\d{1,3}(\.\d{1,3}){3}|[0-9a-f:]*:[0-9a-f:.]+)$/i;
 
 export async function render(root, _params, query) {
   const search = query.get('search') || '';
-  const box = $('#search');
-  if (box.value !== search) box.value = search;
+  const box = h('input', { type: 'search', value: search, placeholder: 'Filter by address, hostname, MAC, owner or tag',
+    'aria-label': 'Filter addresses', oninput: debounce(() => {
+      const q = box.value.trim();
+      history.replaceState(null, '', q ? `#/addresses?search=${encodeURIComponent(q)}` : '#/addresses');
+      table.setSearch(q);
+    }, 250) });
+  box.style.flex = '1';
 
-  const table = ipTable({ search, showSubnet: true });
+  const tag = query.get('tag') || '';
+  const table = ipTable({ search, tag, showSubnet: true });
   const lookup = h('div');
   const tablePanel = h('section.panel');
 
   mount(root,
-    pageHead(search ? `Results for “${search}”` : 'Addresses', null,
+    pageHead(null, tag ? `Addresses tagged “${tag}”` : search ? `Results for “${search}”` : 'Every documented address.',
+      h('a.btn', { href: table.exportUrl(), download: '' }, 'Export CSV'),
+      can('editor') ? h('button', { onclick: async () => { if (await csvImportDialog('ips')) table.load(); } }, 'Import CSV…') : null,
       can('editor') ? h('button.primary', { onclick: () => table.add() }, 'Add address') : null),
     lookup, tablePanel);
-  mount(tablePanel, h('div.panel-head', {}, h('h3', {}, search ? 'Matches' : 'All subnets'),
-    h('div.actions', {}, table.statusFilter)), table.el);
+  mount(tablePanel, h('div.panel-head', {}, box, h('div.actions', {}, table.statusFilter)), table.el);
 
   const [data] = await Promise.all([table.load(), IP_RE.test(search) ? showLookup(search, lookup, table) : null]);
   if (IP_RE.test(search) && !data.total && lookup.childElementCount) tablePanel.classList.add('hidden');

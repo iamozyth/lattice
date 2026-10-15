@@ -1,0 +1,64 @@
+# Local authentik for testing lattice's single sign-on (based on authentik's
+# official compose file). Start it with:
+#   docker compose -f dev/authentik/compose.yml up -d
+# Admin UI: http://authentik.localhost:9000 (user akadmin). Browsers resolve
+# *.localhost to this machine; lattice reaches the same name through the
+# shared lattice-sso network, so both see one issuer URL.
+name: lattice-authentik
+
+services:
+  postgresql:
+    image: docker.io/library/postgres:16-alpine
+    environment:
+      POSTGRES_DB: authentik
+      POSTGRES_USER: authentik
+      POSTGRES_PASSWORD: ${PG_PASS:?run dev/authentik/setup.sh first}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d authentik -U authentik"]
+      interval: 5s
+      retries: 20
+    volumes:
+      - database:/var/lib/postgresql/data
+
+  server:
+    image: ghcr.io/goauthentik/server:2026.8.4
+    command: server
+    env_file: .env
+    environment: &env
+      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+      AUTHENTIK_DISABLE_UPDATE_CHECK: "true"
+    ports:
+      - "127.0.0.1:9000:9000"
+    shm_size: 512mb
+    networks:
+      default:
+      sso:
+        aliases: [authentik.localhost]
+    depends_on:
+      postgresql:
+        condition: service_healthy
+
+  worker:
+    image: ghcr.io/goauthentik/server:2026.8.4
+    command: worker
+    env_file: .env
+    environment: *env
+    shm_size: 512mb
+    volumes:
+      - ./blueprints:/blueprints/custom:ro
+    depends_on:
+      postgresql:
+        condition: service_healthy
+
+volumes:
+  database:
+    name: lattice-authentik-db
+
+networks:
+  sso:
+    name: lattice-sso

@@ -23,7 +23,7 @@ export async function render(root) {
           h('button', { onclick: (e) => test(c, e.currentTarget) }, 'Test'),
           h('button.primary', { onclick: (e) => preview(c, e.currentTarget) }, 'Sync…'),
           h('button.ghost.icon.hover', { 'aria-label': `Edit ${c.name}`, onclick: () => edit(c) }, icon('edit')),
-          h('button.ghost.icon.danger.hover', { 'aria-label': `Delete ${c.name}`, onclick: () => remove(c) }, icon('trash')))),
+          h('button.ghost.icon.danger.hover', { 'aria-label': `Delete ${c.name}`, onclick: () => remove(c) }, icon('delete')))),
       h('div.pad', {}, h('dl.meta-list', {},
         h('dt', {}, 'URL'), h('dd.mono', {}, d.base_url || '—'),
         h('dt', {}, 'Site'), h('dd.mono', {}, d.site_id || '—'),
@@ -112,7 +112,7 @@ export async function render(root) {
   }
 
   mount(root,
-    pageHead('Connectors', 'pull hosts in from other systems', h('button.primary', { onclick: () => edit() }, 'Add connector')),
+    pageHead(null, 'Pull hosts in from other systems, like a UniFi console.', h('button.primary', { onclick: () => edit() }, 'Add connector')),
     list);
   await load();
 }
