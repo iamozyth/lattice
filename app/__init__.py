@@ -13,7 +13,7 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-VERSION = '1.0.0-beta.2'
+VERSION = '1.0.0-beta.3'
 
 # Header every state-changing API request must carry. Browsers only send
 # custom headers cross-origin after a CORS preflight, which we never allow.
