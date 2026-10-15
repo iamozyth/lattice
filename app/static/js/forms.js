@@ -1,6 +1,6 @@
 // Dialog forms shared by several views.
 import { post, put } from './api.js';
-import { dialog, field, formValues, h, input, select, toast } from './dom.js';
+import { busy, dialog, field, formValues, h, input, select, toast } from './dom.js';
 
 export const STATUSES = ['in-use', 'reserved', 'dhcp', 'available', 'blocked', 'deprecated'];
 
@@ -51,27 +51,32 @@ export function ipDialog(ip = {}, { subnetId, suggest } = {}) {
   const editing = Boolean(ip.id);
   const addr = input('address', ip.address, { required: true, class: 'mono', placeholder: '192.168.1.10' });
   const next = suggest && !editing
-    ? h('button', { type: 'button', onclick: async (e) => {
-      e.currentTarget.disabled = true;
-      try { const r = await suggest(); if (r) addr.value = r; else toast('No free address outside DHCP pools', 'warn'); } finally { e.currentTarget.disabled = false; }
-    } }, 'Next free') : null;
-  const body = h('div.grid-2', {},
-    field('Address', h('div.row', {}, addr, next)),
-    field('Status', select('status', STATUSES.map((s) => [s, s]), ip.status || 'in-use')),
-    field('Hostname', input('hostname', ip.hostname)),
-    field('FQDN', input('fqdn', ip.fqdn)),
-    field('MAC address', input('mac_address', ip.mac_address, { class: 'mono', placeholder: 'AA:BB:CC:DD:EE:FF' })),
-    field('Device type', input('device_type', ip.device_type, { placeholder: 'server, printer, AP…' })),
-    field('Manufacturer', input('manufacturer', ip.manufacturer)),
-    field('Model', input('model', ip.model)),
-    field('Serial number', input('serial_number', ip.serial_number)),
-    field('Owner', input('owner', ip.owner)),
-    h('div.wide', {}, field('Description', input('description', ip.description))),
-    h('div.wide', {}, field('Notes', h('textarea', { name: 'notes', rows: 2 }, ip.notes || ''))));
+    ? h('button', { type: 'button', onclick: (e) => busy(e.currentTarget, async () => {
+      const r = await suggest();
+      if (r) addr.value = r;
+      else toast('No free address outside DHCP pools', 'warn');
+    }) }, 'Next free') : null;
+  const hasMore = ['fqdn', 'device_type', 'manufacturer', 'model', 'serial_number', 'owner', 'department', 'notes'].some((k) => ip[k]);
+  const body = h('div.stack', {},
+    h('div.grid-2', {},
+      field('Address', h('div.row', {}, addr, next)),
+      field('Status', select('status', STATUSES.map((s) => [s, s]), ip.status || 'in-use')),
+      field('Hostname', input('hostname', ip.hostname)),
+      field('MAC address', input('mac_address', ip.mac_address, { class: 'mono', placeholder: 'AA:BB:CC:DD:EE:FF' })),
+      h('div.wide', {}, field('Description', input('description', ip.description)))),
+    h('details.more', { open: hasMore }, h('summary', {}, 'More details'),
+      h('div.grid-2', {},
+        field('FQDN', input('fqdn', ip.fqdn)),
+        field('Device type', input('device_type', ip.device_type, { placeholder: 'server, printer, AP…' })),
+        field('Manufacturer', input('manufacturer', ip.manufacturer)),
+        field('Model', input('model', ip.model)),
+        field('Serial number', input('serial_number', ip.serial_number)),
+        field('Owner', input('owner', ip.owner)),
+        field('Department', input('department', ip.department)),
+        h('div.wide', {}, field('Notes', h('textarea', { name: 'notes', rows: 2 }, ip.notes || ''))))));
   addr.style.flex = '1';
   return dialog({
     title: editing ? `Edit ${ip.address}` : 'Document an address',
-    wide: true,
     body,
     onSubmit: async (fd) => {
       const v = formValues(fd, IP_FIELDS);

@@ -1,5 +1,5 @@
 import { del, get, post, put } from '../api.js';
-import { ago, busy, confirmDialog, dialog, empty, field, h, icon, input, mount, select, toast } from '../dom.js';
+import { ago, busy, confirmDialog, dialog, empty, field, h, icon, input, mount, pageHead, select, toast } from '../dom.js';
 import { refreshDriftCount } from '../main.js';
 
 export async function render(root) {
@@ -9,8 +9,7 @@ export async function render(root) {
     const data = await get('/api/connectors');
     if (!data.items.length) {
       mount(list, h('div.panel', {}, empty('No connectors',
-        'Connect a UniFi console to pull in every client it knows about.',
-        h('button.primary', { onclick: () => edit() }, icon('plus'), 'Add UniFi connector'))));
+        'Add a UniFi console to pull in every client it knows about.')));
       return;
     }
     mount(list, data.items.map(card));
@@ -20,12 +19,12 @@ export async function render(root) {
     const d = c.details;
     return h('section.panel', {},
       h('div.panel-head', {}, h('span.dot', { class: c.enabled ? '' : 'off' }), h('strong', {}, c.name),
-        h('span.tag', {}, c.type), h('div.actions', {},
+        h('span.tag', {}, c.enabled ? c.type : `${c.type} · disabled`), h('div.actions', {},
           h('button', { onclick: (e) => test(c, e.currentTarget) }, 'Test'),
-          h('button', { onclick: (e) => preview(c, e.currentTarget) }, icon('sync'), 'Sync…'),
-          h('button.ghost.icon', { 'aria-label': `Edit ${c.name}`, onclick: () => edit(c) }, icon('edit')),
-          h('button.ghost.icon.danger', { 'aria-label': `Delete ${c.name}`, onclick: () => remove(c) }, icon('trash')))),
-      h('div.pad', {}, h('dl.meta', {},
+          h('button.primary', { onclick: (e) => preview(c, e.currentTarget) }, 'Sync…'),
+          h('button.ghost.icon.hover', { 'aria-label': `Edit ${c.name}`, onclick: () => edit(c) }, icon('edit')),
+          h('button.ghost.icon.danger.hover', { 'aria-label': `Delete ${c.name}`, onclick: () => remove(c) }, icon('trash')))),
+      h('div.pad', {}, h('dl.meta-list', {},
         h('dt', {}, 'URL'), h('dd.mono', {}, d.base_url || '—'),
         h('dt', {}, 'Site'), h('dd.mono', {}, d.site_id || '—'),
         h('dt', {}, 'Auth'), h('dd', {}, d.auth === 'api_key' ? 'API key' : `Username ${d.username || ''}`,
@@ -48,7 +47,7 @@ export async function render(root) {
   async function preview(c, button) {
     const plan = await busy(button, () => post(`/api/connectors/${c.id}/sync?dry_run=true`));
     if (!plan) return;
-    const section = (title, items, row) => (items.length ? h('div', {}, h('h2', {}, `${title} · ${items.length}`),
+    const section = (title, items, row) => (items.length ? h('div.stack', {}, h('h3', {}, `${title} · ${items.length}`),
       h('div.table-wrap', {}, h('table', {}, h('tbody', {}, items.slice(0, 300).map(row))))) : null);
     const body = h('div.stack', {},
       h('p.muted', {}, `${plan.hosts} clients reported. New hosts are added as in-use; existing addresses only get empty fields filled.`),
@@ -113,8 +112,7 @@ export async function render(root) {
   }
 
   mount(root,
-    h('div.page-head', {}, h('h1', {}, 'Connectors'),
-      h('div.actions', {}, h('button.primary', { onclick: () => edit() }, icon('plus'), 'Add connector'))),
+    pageHead('Connectors', 'pull hosts in from other systems', h('button.primary', { onclick: () => edit() }, 'Add connector')),
     list);
   await load();
 }

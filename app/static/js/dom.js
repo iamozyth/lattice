@@ -85,12 +85,21 @@ export function utilBar(percent) {
   const fill = h('i');
   fill.style.width = `${Math.min(100, percent)}%`;
   const level = percent >= 90 ? 'high' : percent >= 70 ? 'mid' : '';
-  return h('div.util', {}, h('div.bar', { class: level }, fill), h('span.mono.muted', {}, `${percent}%`));
+  return h('span.util', {}, h('span.bar', { class: level }, fill), `${percent}%`);
 }
 
-export function empty(title, text, ...actions) {
-  return h('div.empty', {}, h('strong', {}, title), text ? h('div', {}, text) : null,
-    actions.length ? h('div.row', { class: 'center' }, ...actions) : null);
+export function empty(title, text) {
+  return h('div.empty', {}, h('strong', {}, title), text ? h('div', {}, text) : null);
+}
+
+// Page heading: title, a muted summary and actions on the right
+export function pageHead(title, meta, ...actions) {
+  return h('div.head', {}, h('h2', {}, title), meta ? h('span.meta', {}, meta) : null,
+    actions.some(Boolean) ? h('div.actions', {}, ...actions) : null);
+}
+
+export function panelHead(title, ...right) {
+  return h('div.panel-head', {}, h('h3', {}, title), right.some(Boolean) ? h('div.actions', {}, ...right) : null);
 }
 
 // ---------- dialogs ----------
@@ -102,7 +111,7 @@ export function dialog({ title, wide = false, body, actions = [], onSubmit, subm
     const submit = onSubmit
       ? h('button', { type: 'submit', class: danger ? 'danger solid' : 'primary' }, submitLabel) : null;
     const form = h('form', { method: 'dialog', novalidate: false },
-      h('header', {}, h('h3', {}, title),
+      h('header', {}, h('h4', {}, title),
         h('button.ghost.icon.x', { type: 'button', 'aria-label': 'Close', onclick: () => close() }, icon('x'))),
       h('div.content', {}, body, error),
       h('footer', {}, ...actions, h('button', { type: 'button', onclick: () => close() }, onSubmit ? 'Cancel' : 'Close'), submit));
@@ -152,6 +161,7 @@ export function select(name, options, value) {
 export function formValues(fd, names) {
   const out = {};
   for (const name of names) {
+    if (!fd.has(name)) continue;
     const v = fd.get(name);
     out[name] = v === null || v === '' ? null : String(v).trim();
   }
