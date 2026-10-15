@@ -107,3 +107,38 @@ def test_update_check_knows_when_build_is_newer(monkeypatch):
     assert not r['ahead'] and not r['update_available']
     monkeypatch.setattr(updates, 'latest_release', lambda: {'tag_name': 'v1.0.0', 'html_url': 'x'})
     assert updates.check_for_updates('1.0.0-beta.2')['update_available']
+
+
+def test_subnet_reports_its_running_scan_so_a_reloaded_page_can_reattach(editor, subnet, monkeypatch):
+    import threading
+    from app import discovery, scanner
+    release = threading.Event()
+
+    def slow_scan(scan_type, values, on_line=None, should_stop=None):
+        release.wait(5)
+        return []
+    monkeypatch.setattr(discovery, 'nmap_available', lambda: True)
+    monkeypatch.setattr(scanner, 'run_scan', slow_scan)
+
+    assert editor.get(f"/api/subnets/{subnet['id']}").json['scan_job_id'] is None
+    job_id = editor.post(f"/api/subnets/{subnet['id']}/scans", {'scan_type': 'ping'}).json['job_id']
+    assert editor.get(f"/api/subnets/{subnet['id']}").json['scan_job_id'] == job_id
+    release.set()
+    for _ in range(50):
+        if editor.get(f'/api/scans/{job_id}').json['status'] != 'running':
+            break
+        threading.Event().wait(0.05)
+    assert editor.get(f"/api/subnets/{subnet['id']}").json['scan_job_id'] is None
+
+
+def test_a_scanned_gateway_stays_the_gateway(app, editor, subnet):
+    with app.app_context():
+        record_hosts(subnet['id'], [{'address': '192.168.50.1'}, {'address': '192.168.50.9'}], source='scan')
+    cell = lambda a: next(c for c in editor.get(f"/api/subnets/{subnet['id']}/map").json['cells'] if c['address'] == a)
+    assert cell('192.168.50.1')['state'] == 'gateway'
+    undocumented = [d['address'] for d in editor.get('/api/drift').json['undocumented']]
+    assert undocumented == ['192.168.50.9']  # the gateway is known, not drift
+
+    # Documenting the router as an address keeps it a gateway on the map, but editable
+    ip = editor.post('/api/ips', {'subnet_id': subnet['id'], 'address': '192.168.50.1', 'hostname': 'router'}).json
+    assert (cell('192.168.50.1')['state'], cell('192.168.50.1')['id']) == ('gateway', ip['id'])

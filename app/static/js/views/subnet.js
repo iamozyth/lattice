@@ -251,7 +251,8 @@ export async function render(root, [id]) {
   drawHead();
   drawInfo();
   drawDhcp();
-  drawScanIdle();
+  // A scan keeps running on the server when the page is left; pick it up again
+  if (subnet.scan_job_id) watch(subnet.scan_job_id); else drawScanIdle();
   await Promise.all([drawMap(), drawInside(), drawActivity(), table.load()]);
 
   // "Add address to this subnet" from the command palette

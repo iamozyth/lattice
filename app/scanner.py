@@ -186,6 +186,12 @@ class ScanJobs:
             snapshot['discovered'] = list(job['discovered'])
             return snapshot
 
+    def running_for(self, subnet_id):
+        """The id of the scan running on this subnet, so a reloaded page can pick it up again."""
+        with self._lock:
+            return next((j['id'] for j in self._jobs.values()
+                         if j['status'] == 'running' and j['subnet_id'] == subnet_id), None)
+
     def _log(self, job_id, line):
         with self._lock:
             logs = self._jobs[job_id]['logs']
