@@ -14,7 +14,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY --chown=lattice:lattice . .
-RUN chmod +x /app/start.sh
+RUN chmod +x /app/start.sh && chown lattice:lattice /app
 
 ENV FLASK_APP=wsgi:app \
     NMAP_PRIVILEGED=1 \

@@ -33,6 +33,10 @@ services:
       SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
       # Encrypts stored connector credentials
       CONNECTOR_SECRET: ${CONNECTOR_SECRET:?set CONNECTOR_SECRET in .env}
+      SCAN_INTERVAL_HOURS: ${SCAN_INTERVAL_HOURS:-6}
+      STALE_DAYS: ${STALE_DAYS:-30}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
     # Raw sockets for nmap ping/ARP and OS detection
     cap_add:
       - NET_RAW
