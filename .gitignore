@@ -15,3 +15,6 @@ htmlcov/
 db_data/
 cookies.txt
 *.cookies
+.claude/skills/
+.venv/
+.claude/launch.json

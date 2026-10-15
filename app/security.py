@@ -1,54 +1,44 @@
+"""Encryption for stored connector credentials."""
 import base64
-import json
-import os
 import hashlib
-from typing import Any, Dict
+import json
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, MultiFernet
+from flask import current_app
 
-
-def _derive_key_from_secret(secret: str) -> bytes:
-    """Derive a 32-byte urlsafe base64 key from an arbitrary secret string.
-
-    This allows using the app's SECRET_KEY or a dedicated CONNECTOR_SECRET.
-    """
-    if not secret:
-        # Fallback static string (not recommended); caller should ensure a real secret is provided
-        secret = "netdoc-ipam-default-secret"
-    digest = hashlib.sha256(secret.encode("utf-8")).digest()
-    return base64.urlsafe_b64encode(digest)
+# Earlier versions fell back to this public constant when no secret was set.
+# We still accept it for decryption so existing connectors keep working; the
+# next save re-encrypts with the real key.
+_LEGACY_SECRET = 'netdoc-ipam-default-secret'
 
 
-def get_fernet() -> Fernet:
-    """Return a Fernet instance using CONNECTOR_SECRET or derive from SECRET_KEY."""
-    connector_secret = os.environ.get("CONNECTOR_SECRET")
-    if connector_secret and len(connector_secret) >= 32:
-        try:
-            # If provided as raw 32-byte urlsafe base64 key, use directly
-            key = connector_secret.encode("utf-8")
-            # Validate by constructing Fernet (will raise if invalid)
-            return Fernet(key)
-        except Exception:
-            # If invalid format, derive from provided string
-            pass
-        key = _derive_key_from_secret(connector_secret)
-        return Fernet(key)
-
-    # Fallback to SECRET_KEY or static derivation
-    secret_key = os.environ.get("SECRET_KEY", "")
-    key = _derive_key_from_secret(secret_key)
-    return Fernet(key)
+def _derive(secret):
+    return base64.urlsafe_b64encode(hashlib.sha256(secret.encode('utf-8')).digest())
 
 
-def encrypt_config(config: Dict[str, Any]) -> bytes:
-    """Encrypt a JSON config dict to bytes."""
-    f = get_fernet()
-    payload = json.dumps(config).encode("utf-8")
-    return f.encrypt(payload)
+def _key_from(secret):
+    """CONNECTOR_SECRET may be a Fernet key or any string."""
+    try:
+        Fernet(secret.encode('utf-8'))
+        return secret.encode('utf-8')
+    except (ValueError, TypeError):
+        return _derive(secret)
 
 
-def decrypt_config(blob: bytes) -> Dict[str, Any]:
-    """Decrypt bytes back into a JSON dict."""
-    f = get_fernet()
-    data = f.decrypt(blob)
-    return json.loads(data.decode("utf-8"))
+def get_fernet():
+    connector_secret = current_app.config.get('CONNECTOR_SECRET')
+    secret_key = current_app.config['SECRET_KEY']
+    keys = []
+    if connector_secret:
+        keys.append(_key_from(connector_secret))
+    keys.append(_derive(secret_key))
+    keys.append(_derive(_LEGACY_SECRET))
+    return MultiFernet([Fernet(k) for k in dict.fromkeys(keys)])
+
+
+def encrypt_config(config):
+    return get_fernet().encrypt(json.dumps(config).encode('utf-8'))
+
+
+def decrypt_config(blob):
+    return json.loads(get_fernet().decrypt(blob).decode('utf-8'))

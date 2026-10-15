@@ -1,6 +1,4 @@
-"""
-Connectors package for external integrations.
+"""Connectors pull hosts from other systems into Lattice."""
+from app.connectors.unifi import UniFiConnector
 
-Currently supported:
-- UniFi Network API (collect connected clients)
-"""
+CONNECTOR_TYPES = {UniFiConnector.type: UniFiConnector}
