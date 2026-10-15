@@ -188,6 +188,8 @@ Then use issuer `http://authentik.localhost:9000/application/o/lattice/`, client
 
 ## Upgrading
 
+**From 1.0.0-beta.2:** the database migrates itself on start. Each VLAN number on a subnet becomes a VLAN named "VLAN n" (rename them on the VLANs page), and comma-separated subnet tags become real tags. JSON backups from older versions still import.
+
 **From 1.0.0-beta.1:** self-registration is gone. Existing admins stay admins, every other user becomes an editor. Everyone has to log in again.
 
 **From netdoc-ipam:** the data volume keeps its old name `ipam-db-data`, so your data stays. The defaults changed, though. Put your old values in `.env`:
