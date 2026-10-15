@@ -58,6 +58,54 @@ class Connector(db.Model):
         }
 
 
+subnet_tags = db.Table(
+    'subnet_tags',
+    db.Column('subnet_id', db.Integer, db.ForeignKey('subnets.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('tag_id', db.Integer, db.ForeignKey('tags.id', ondelete='CASCADE'), primary_key=True),
+)
+ip_tags = db.Table(
+    'ip_tags',
+    db.Column('ip_id', db.Integer, db.ForeignKey('ips.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('tag_id', db.Integer, db.ForeignKey('tags.id', ondelete='CASCADE'), primary_key=True),
+)
+
+
+def _tag_names(tags):
+    return sorted((t.name for t in tags), key=str.lower)
+
+
+class Vlan(db.Model):
+    __tablename__ = 'vlans'
+
+    id = db.Column(db.Integer, primary_key=True)
+    vid = db.Column(db.Integer, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    site = db.Column(db.String(100), nullable=False, default='', server_default='')
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('vid', 'site', name='unique_vlan_per_site'),)
+
+    def __str__(self):
+        return f'VLAN {self.vid} {self.name}'
+
+    def to_dict(self):
+        return {'id': self.id, 'vid': self.vid, 'name': self.name, 'site': self.site,
+                'description': self.description}
+
+
+class Tag(db.Model):
+    __tablename__ = 'tags'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+
+    __table_args__ = (db.Index('unique_tag_name', db.func.lower(name), unique=True),)
+
+    def __str__(self):
+        return self.name
+
+
 class Subnet(db.Model):
     __tablename__ = 'subnets'
 
@@ -65,13 +113,12 @@ class Subnet(db.Model):
     name = db.Column(db.String(255), nullable=False, unique=True)
     cidr = db.Column(db.String(43), nullable=False, unique=True)
     description = db.Column(db.Text)
-    vlan = db.Column(db.Integer)
+    vlan_id = db.Column(db.Integer, db.ForeignKey('vlans.id', ondelete='SET NULL'), index=True)
     gateway = db.Column(db.String(45))
     dns_primary = db.Column(db.String(45))
     dns_secondary = db.Column(db.String(45))
     location = db.Column(db.String(255))
     environment = db.Column(db.String(50))
-    tags = db.Column(db.Text)  # comma-separated
     scan_enabled = db.Column(db.Boolean)  # None = automatic (small IPv4 subnets only)
     last_scan_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -82,9 +129,11 @@ class Subnet(db.Model):
     dhcp_ranges = db.relationship('DhcpRange', backref='subnet', lazy=True,
                                   cascade='all, delete-orphan', passive_deletes=True,
                                   order_by='DhcpRange.id')
+    vlan_obj = db.relationship('Vlan', backref=db.backref('subnets', lazy=True), lazy='joined')
+    tags = db.relationship('Tag', secondary=subnet_tags, lazy='selectin', backref=db.backref('subnets', lazy=True))
+    TRACKED_RELATIONS = ('tags',)
 
     __table_args__ = (
-        db.Index('idx_subnet_vlan', 'vlan'),
         db.Index('idx_subnet_environment', 'environment'),
     )
 
@@ -164,13 +213,15 @@ class Subnet(db.Model):
             'cidr': self.cidr,
             'version': net.version,
             'description': self.description,
-            'vlan': self.vlan,
+            'vlan': self.vlan_obj.vid if self.vlan_obj else None,
+            'vlan_id': self.vlan_id,
+            'vlan_name': self.vlan_obj.name if self.vlan_obj else None,
             'gateway': self.gateway,
             'dns_primary': self.dns_primary,
             'dns_secondary': self.dns_secondary,
             'location': self.location,
             'environment': self.environment,
-            'tags': [t for t in (self.tags or '').split(',') if t],
+            'tags': _tag_names(self.tags),
             'first_ip': str(net.network_address),
             'last_ip': str(net.broadcast_address),
             'netmask': str(net.netmask),
@@ -247,6 +298,9 @@ class IP(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    tags = db.relationship('Tag', secondary=ip_tags, lazy='selectin', backref=db.backref('ips', lazy=True))
+    TRACKED_RELATIONS = ('tags',)
+
     # Fields a client may set; everything else is managed by the server
     FIELDS = ('address', 'hostname', 'fqdn', 'description', 'status', 'mac_address',
               'device_type', 'manufacturer', 'model', 'serial_number', 'owner',
@@ -269,6 +323,7 @@ class IP(db.Model):
             'last_seen': _iso(self.last_seen),
             'created_at': _iso(self.created_at),
             'updated_at': _iso(self.updated_at),
+            'tags': _tag_names(self.tags),
         })
         return data
 
@@ -320,6 +375,8 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(10), nullable=False, default='editor', server_default='editor')
     is_active = db.Column(db.Boolean, default=True)
+    # Set for accounts created by single sign-on: the provider's stable user ID
+    sso_subject = db.Column(db.String(255), unique=True)
     session_version = db.Column(db.Integer, nullable=False, default=1, server_default='1')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -350,8 +407,42 @@ class User(UserMixin, db.Model):
             'email': self.email,
             'role': self.role,
             'is_active': self.is_active,
+            'source': 'sso' if self.sso_subject else 'local',
             'created_at': _iso(self.created_at),
         }
+
+
+class Change(db.Model):
+    """One recorded change: who did what to which object, with before/after values."""
+    __tablename__ = 'changes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    user_id = db.Column(db.Integer)
+    username = db.Column(db.String(80), nullable=False)
+    via = db.Column(db.String(10), nullable=False)
+    action = db.Column(db.String(10), nullable=False)
+    entity = db.Column(db.String(20), nullable=False)
+    entity_id = db.Column(db.Integer)
+    label = db.Column(db.String(255))
+    subnet_id = db.Column(db.Integer, index=True)
+    diff = db.Column(db.JSON, nullable=False, default=dict)
+
+    __table_args__ = (db.Index('idx_change_entity', 'entity', 'entity_id'),)
+
+    def to_dict(self):
+        return {'id': self.id, 'at': _iso(self.at), 'user_id': self.user_id, 'username': self.username,
+                'via': self.via, 'action': self.action, 'entity': self.entity, 'entity_id': self.entity_id,
+                'label': self.label, 'subnet_id': self.subnet_id, 'diff': self.diff}
+
+
+class Setting(db.Model):
+    """Small JSON settings saved from the UI, e.g. single sign-on."""
+    __tablename__ = 'settings'
+
+    key = db.Column(db.String(64), primary_key=True)
+    value = db.Column(db.Text, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 @login_manager.user_loader

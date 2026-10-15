@@ -14,7 +14,7 @@ from app import create_app, db, limiter  # noqa: E402
 from app.models import User  # noqa: E402
 
 HEADERS = {'X-Requested-With': 'lattice'}
-TABLES = 'discoveries, dhcp_ranges, ips, subnets, connectors, users'
+TABLES = 'discoveries, dhcp_ranges, ip_tags, subnet_tags, tags, ips, subnets, vlans, connectors, users, settings, changes'
 
 
 @pytest.fixture(scope='session')

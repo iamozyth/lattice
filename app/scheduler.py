@@ -46,17 +46,26 @@ def sweep_all(app):
                 db.session.rollback()
 
 
+def purge_history(app):
+    from app.history import purge
+    with app.app_context():
+        n = purge(app.config['HISTORY_DAYS'])
+        if n:
+            logger.info('Dropped %d history entries older than %d days', n, app.config['HISTORY_DAYS'])
+
+
 def init_scheduler(app):
+    if scheduler.running:
+        return
+    scheduler.add_job(purge_history, 'interval', hours=24, args=[app], id='purge_history',
+                      max_instances=1, coalesce=True, replace_existing=True)
     hours = app.config['SCAN_INTERVAL_HOURS']
     if hours <= 0:
         logger.info('Scheduled scans disabled (SCAN_INTERVAL_HOURS=0)')
-        return
-    if not nmap_available():
+    elif not nmap_available():
         logger.warning('nmap not found; scheduled scans disabled')
-        return
-    if scheduler.running:
-        return
-    scheduler.add_job(sweep_all, 'interval', hours=hours, args=[app], id='sweep_all',
-                      max_instances=1, coalesce=True, replace_existing=True)
+    else:
+        scheduler.add_job(sweep_all, 'interval', hours=hours, args=[app], id='sweep_all',
+                          max_instances=1, coalesce=True, replace_existing=True)
+        logger.info('Scheduled ping sweeps every %s hours', hours)
     scheduler.start()
-    logger.info('Scheduled ping sweeps every %s hours', hours)

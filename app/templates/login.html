@@ -2,36 +2,58 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>lattice · sign in</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)">
+  <title>Sign in · lattice</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/static/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/css/app.css?v={{ version }}">
   <script type="module" src="/static/js/login.js?v={{ version }}"></script>
 </head>
-<body>
-<div class="auth">
-  <div>
-    <div class="brand"><span class="dot"></span><h1>lattice</h1></div>
-    <div class="panel">
-      <form id="login" class="hidden">
-        <label class="field"><span>Username</span><input name="username" autocomplete="username" required autofocus></label>
-        <label class="field"><span>Password</span><input name="password" type="password" autocomplete="current-password" required></label>
-        <label class="check"><input type="checkbox" name="remember" checked> Keep me signed in</label>
-        <p class="error-box" id="login-error"></p>
-        <button class="primary" type="submit">Sign in</button>
-      </form>
-      <form id="setup" class="hidden">
-        <p class="lead">Create the first admin account.</p>
-        <label class="field"><span>Username</span><input name="username" autocomplete="username" minlength="3" required></label>
-        <label class="field"><span>Email</span><input name="email" type="email" autocomplete="email" required></label>
-        <label class="field"><span>Password</span><input name="password" type="password" autocomplete="new-password" minlength="8" required>
-          <div class="meter"><i id="meter"></i></div>
-          <span class="hint" id="meter-text">At least 8 characters</span></label>
-        <p class="error-box" id="setup-error"></p>
-        <button class="primary" type="submit">Create admin</button>
-      </form>
-    </div>
+<body class="login-page">
+{% include '_sprite.html' %}
+<main class="login">
+  <div class="login-brand">
+    <svg class="mark" aria-hidden="true"><use href="#pg-mark"/></svg>
+    <span class="login-host" id="host"></span>
   </div>
-</div>
+  <section class="panel login-card">
+    <form id="login" novalidate>
+      <div class="login-head">
+        <h1 id="title">Sign in to lattice</h1>
+        <p class="lede" id="lede">Every subnet, address and device on your network.</p>
+      </div>
+
+      <div class="sso" id="sso" hidden>
+        <a class="btn primary login-submit sso-btn" id="sso-btn" href="/auth/oidc/start"><span class="spinner" aria-hidden="true"></span><svg class="key" aria-hidden="true"><use href="#pg-key"/></svg><span id="sso-text">Continue with SSO</span></a>
+        <button class="login-or" type="button" id="local-or" aria-expanded="false" aria-controls="step-password" hidden><span id="local-or-text">Use a local account</span><svg class="chev" aria-hidden="true"><use href="#pg-chev"/></svg></button>
+      </div>
+
+      <div class="login-step" id="step-password">
+        <label class="field"><span>Username</span>
+          <input name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+        </label>
+        <label class="field hidden" id="email-row"><span>Email</span>
+          <input name="email" type="email" autocomplete="email">
+        </label>
+        <label class="field"><span>Password</span>
+          <span class="pw-wrap">
+            <input name="password" type="password" autocomplete="current-password" required>
+            <button class="pw-toggle" type="button" id="pw-toggle" aria-label="Show password" aria-pressed="false"><svg><use href="#pg-eye"/></svg></button>
+          </span>
+          <span class="meter hidden" id="meter-row"><i id="meter"></i></span>
+          <span class="caps" id="caps" hidden>Caps Lock is on</span>
+        </label>
+      </div>
+
+      <p class="login-error" id="error" role="alert" hidden><svg><use href="#pg-alert"/></svg><span id="error-text"></span></p>
+
+      <button class="primary login-submit" id="submit"><span class="spinner" aria-hidden="true"></span><span id="submit-text">Continue</span></button>
+    </form>
+  </section>
+  <p class="foot" id="foot">Accounts are managed by an admin under Settings.</p>
+</main>
 </body>
 </html>

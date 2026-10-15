@@ -2,38 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)">
   <title>lattice</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/static/favicon-180.png">
+  <link rel="preload" href="/static/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/css/app.css?v={{ version }}">
   <script type="module" src="/static/js/main.js?v={{ version }}"></script>
 </head>
-<body>
-<svg class="hidden" aria-hidden="true">
-  <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
-  <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
-  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
-</svg>
+<body class="app">
+{% include '_sprite.html' %}
 
-<div class="wrap">
-  <header class="top">
-    <a class="brand" href="#/subnets"><span class="dot"></span><h1>lattice</h1></a>
-    <nav id="nav" aria-label="Main">
-      <a href="#/subnets" data-nav="subnets">Subnets</a>
-      <a href="#/addresses" data-nav="addresses">Addresses</a>
-      <a href="#/drift" data-nav="drift">Drift <span class="count" id="drift-count"></span></a>
-      <a href="#/connectors" data-nav="connectors" data-role="admin">Connectors</a>
-      <a href="#/settings" data-nav="settings">Settings</a>
-    </nav>
-    <form class="search" id="search-form" role="search">
-      <input id="search" type="search" placeholder="Search  /" aria-label="Search addresses, hostnames and MACs" autocomplete="off" spellcheck="false">
-    </form>
-    <span class="who" id="who"></span>
-    <button class="ghost" data-action="logout">Log out</button>
+<aside class="rail">
+  <a class="wordmark" href="#/subnets"><svg class="mark" aria-hidden="true"><use href="#pg-mark"/></svg><span>lattice</span></a>
+  <nav class="nav" id="nav" aria-label="Main">
+    <a href="#/subnets" data-nav="subnets"><span class="tile"><svg><use href="#pg-subnets"/></svg></span><span>Subnets</span></a>
+    <a href="#/addresses" data-nav="addresses"><span class="tile"><svg><use href="#pg-addresses"/></svg></span><span>Addresses</span></a>
+    <a href="#/vlans" data-nav="vlans"><span class="tile"><svg><use href="#pg-vlans"/></svg></span><span>VLANs</span></a>
+    <a href="#/drift" data-nav="drift"><span class="tile"><svg><use href="#pg-drift"/></svg></span><span>Drift</span><span class="count warn" id="drift-count"></span></a>
+    <a href="#/activity" data-nav="activity"><span class="tile"><svg><use href="#pg-activity"/></svg></span><span>Activity</span></a>
+    <span class="nav-sep" role="presentation"></span>
+    <a href="#/connectors" data-nav="connectors" data-role="admin"><span class="tile"><svg><use href="#pg-connectors"/></svg></span><span>Connectors</span></a>
+    <a href="#/settings" data-nav="settings"><span class="tile"><svg><use href="#pg-settings"/></svg></span><span>Settings</span></a>
+  </nav>
+  <div class="rail-foot">
+    <div class="rail-user">
+      <span class="avatar" id="me-initial" aria-hidden="true"></span>
+      <div class="rail-user-text">
+        <a class="who" href="#/settings"><span id="me"></span><svg id="me-sso" role="img" aria-label="Signed in with single sign-on" hidden><use href="#pg-key"/></svg></a>
+        <span class="rail-meta"><span id="me-role"></span> · <span class="mono" id="version"></span></span>
+      </div>
+      <button class="ghost icon" data-action="logout" aria-label="Sign out" title="Sign out"><svg><use href="#pg-signout"/></svg></button>
+    </div>
+  </div>
+</aside>
+
+<div class="column">
+  <header class="topbar">
+    <div class="area-title">
+      <svg aria-hidden="true"><use id="area-icon" href="#pg-subnets"/></svg>
+      <h1 id="area-name">Subnets</h1>
+    </div>
+    <button class="palette-btn" id="palette-open" type="button" aria-label="Search and run" aria-keyshortcuts="Control+K Meta+K"><svg aria-hidden="true"><use href="#pg-search"/></svg><span>Search and run</span><kbd id="palette-key">Ctrl K</kbd></button>
+    <button class="ghost icon mobile-only" data-action="logout" aria-label="Sign out"><svg><use href="#pg-signout"/></svg></button>
   </header>
-
-  <main id="view" tabindex="-1"></main>
+  <main><div class="area" id="view" tabindex="-1"></div></main>
 </div>
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 </body>

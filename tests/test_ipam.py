@@ -9,11 +9,11 @@ def test_cidr_is_normalized_and_unique(editor):
     assert dup.status_code == 409
 
 
-def test_overlap_is_a_warning(editor):
-    editor.post('/api/subnets', {'name': 'big', 'cidr': '10.0.0.0/16'})
+def test_nested_subnet_reports_its_parent(editor):
+    big = editor.post('/api/subnets', {'name': 'big', 'cidr': '10.0.0.0/16'}).json
     resp = editor.post('/api/subnets', {'name': 'small', 'cidr': '10.0.5.0/24'})
     assert resp.status_code == 201
-    assert any('big' in w for w in resp.json['warnings'])
+    assert resp.json['inside']['id'] == big['id']
 
 
 def test_ip_validation(editor, subnet):

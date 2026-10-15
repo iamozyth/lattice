@@ -11,11 +11,12 @@ from sqlalchemy import cast, func
 from sqlalchemy.dialects.postgresql import INET
 from sqlalchemy.exc import IntegrityError
 
-from app import VERSION, db, limiter
+from app import VERSION, db, hierarchy, limiter
 from app.auth import require_role
-from app.models import IP, USED_STATUSES, Discovery, DhcpRange, Subnet
+from app.catalog import tag_filter, vlan_by_number
+from app.models import IP, USED_STATUSES, Discovery, DhcpRange, Subnet, Tag, Vlan
 from app.validation import (ValidationError, apply, check_ip_in_subnet, check_subnet,
-                            dhcp_range_fields, ip_fields, normalize_ip, overlap_warnings,
+                            dhcp_range_fields, ip_fields, normalize_ip,
                             subnet_fields)
 
 api_bp = APIBlueprint('api', __name__, url_prefix='/api')
@@ -90,6 +91,15 @@ def _subnet_dict(subnet, counts=None):
     return subnet.to_dict(used_count=used, ip_count=total)
 
 
+def _with_parent(subnet, data):
+    everything = Subnet.query.all()
+    parent = hierarchy.parent_of(subnet, everything)
+    data['inside'] = {'id': parent.id, 'name': parent.name, 'cidr': parent.cidr} if parent else None
+    links = hierarchy.tree(everything)
+    data.update({k: links[subnet.id][k] for k in ('depth', 'children', 'allocated')})
+    return data
+
+
 # ---------------------------------------------------------------------------
 # Pages
 # ---------------------------------------------------------------------------
@@ -155,18 +165,23 @@ def list_subnets():
         query = query.filter(
             Subnet.name.ilike(like, escape='\\') | Subnet.cidr.ilike(like, escape='\\')
             | Subnet.description.ilike(like, escape='\\') | Subnet.location.ilike(like, escape='\\')
-            | Subnet.tags.ilike(like, escape='\\'))
+            | Subnet.tags.any(Tag.name.ilike(like, escape='\\')))
     if request.args.get('environment'):
         query = query.filter(Subnet.environment == request.args['environment'])
+    if request.args.get('vlan_id', '').isdigit():
+        query = query.filter(Subnet.vlan_id == int(request.args['vlan_id']))
     if request.args.get('vlan', '').isdigit():
-        query = query.filter(Subnet.vlan == int(request.args['vlan']))
-    sort = request.args.get('sort', 'cidr')
-    order = {'name': func.lower(Subnet.name), 'vlan': Subnet.vlan,
-             'created': Subnet.created_at}.get(sort, cast(Subnet.cidr, INET))
-    subnets = query.order_by(order, Subnet.id).limit(2000).all()
+        query = query.filter(Subnet.vlan_obj.has(Vlan.vid == int(request.args['vlan'])))
+    if request.args.get('tag'):
+        query = tag_filter(query, Subnet, request.args['tag'])
+    matches = {s.id for s in query.limit(2000)}
+    everything = Subnet.query.all()
+    links = hierarchy.tree(everything)
+    subnets = [s for s in hierarchy.ordered(everything) if s.id in matches]
     counts = _ip_counts([s.id for s in subnets])
     environments = sorted({e for (e,) in db.session.query(Subnet.environment).distinct() if e})
-    return {'items': [_subnet_dict(s, counts) for s in subnets], 'environments': environments}
+    items = [{**_subnet_dict(s, counts), **links[s.id]} for s in subnets]
+    return {'items': items, 'environments': environments}
 
 
 @api_bp.get('/subnets/<int:subnet_id>', tags=[tag_subnets])
@@ -175,9 +190,7 @@ def get_subnet(path: SubnetPath):
     subnet, err = _subnet_or_404(path.subnet_id)
     if err:
         return err
-    data = _subnet_dict(subnet)
-    data['warnings'] = overlap_warnings(subnet)
-    return data
+    return _with_parent(subnet, _subnet_dict(subnet))
 
 
 @api_bp.post('/subnets', tags=[tag_subnets])
@@ -188,12 +201,14 @@ def create_subnet():
     check_subnet(subnet)
     db.session.add(subnet)
     try:
-        db.session.commit()
+        db.session.flush()
     except IntegrityError:
         db.session.rollback()
         return {'error': 'A subnet with this name or CIDR already exists'}, 409
-    data = _subnet_dict(subnet)
-    data['warnings'] = overlap_warnings(subnet)
+    moved = hierarchy.move_into_child(subnet)
+    db.session.commit()
+    data = _with_parent(subnet, _subnet_dict(subnet))
+    data['moved'] = moved
     return data, 201
 
 
@@ -210,9 +225,7 @@ def update_subnet(path: SubnetPath):
     except IntegrityError:
         db.session.rollback()
         return {'error': 'A subnet with this name or CIDR already exists'}, 409
-    data = _subnet_dict(subnet)
-    data['warnings'] = overlap_warnings(subnet)
-    return data
+    return _with_parent(subnet, _subnet_dict(subnet))
 
 
 @api_bp.delete('/subnets/<int:subnet_id>', tags=[tag_subnets])
@@ -221,9 +234,26 @@ def delete_subnet(path: SubnetPath):
     subnet, err = _subnet_or_404(path.subnet_id)
     if err:
         return err
+    hierarchy.move_to_parent(subnet)  # addresses go up to the parent, if any
     db.session.delete(subnet)
     db.session.commit()
     return '', 204
+
+
+@api_bp.get('/subnets/<int:subnet_id>/free-blocks', tags=[tag_subnets])
+@require_role('viewer')
+def free_blocks(path: SubnetPath):
+    """Space not taken by child subnets, and the next free blocks of a size."""
+    subnet, err = _subnet_or_404(path.subnet_id)
+    if err:
+        return err
+    net = subnet.network
+    prefix = request.args.get('prefix', '')
+    if prefix:
+        if not prefix.isdigit() or not net.prefixlen < int(prefix) <= net.max_prefixlen:
+            return {'error': f'prefix must be between /{net.prefixlen + 1} and /{net.max_prefixlen}'}, 400
+        prefix = int(prefix)
+    return hierarchy.free_blocks(subnet, prefix or None, _int_arg('limit', 8, 1, 64))
 
 
 @api_bp.get('/subnets/<int:subnet_id>/free', tags=[tag_subnets])
@@ -252,12 +282,16 @@ def subnet_map(path: SubnetPath):
     discovered = {d.address: d for d in Discovery.query.filter_by(subnet_id=subnet.id, ignored=False)}
     reserved = subnet.reserved_addresses()
     ranges = [(r.start_int, r.end_int) for r in subnet.dhcp_ranges]
+    children = [(c.network, c) for c in hierarchy.children_of(subnet)]
     cells = []
     for addr in net:
         key = str(addr)
         cell = {'address': key}
         ip = ips.get(key)
-        if ip:
+        child = next((c for cnet, c in children if addr in cnet), None)
+        if child:
+            cell.update(state='child', child_id=child.id, hostname=f'{child.name} ({child.cidr})')
+        elif ip:
             cell.update(state=ip.status, id=ip.id, hostname=ip.hostname)
         elif key == subnet.gateway:
             cell['state'] = 'gateway'
@@ -346,27 +380,37 @@ def _ip_warnings(ip, subnet):
 @api_bp.get('/ips', tags=[tag_ips])
 @require_role('viewer')
 def list_ips():
-    """List IPs. Filters: subnet_id, status, search. Paged with page/per_page."""
+    """List IPs. Filters: subnet_id, status, tag, vlan_id, search. Paged with page/per_page."""
+    query = ip_query(request.args)
+    page = _int_arg('page', 1, 1, 100000)
+    per_page = _int_arg('per_page', 100, 1, 500)
+    total = query.count()
+    items = query.offset((page - 1) * per_page).limit(per_page).all()
+    return {'items': [ip.to_dict() for ip in items], 'total': total, 'page': page,
+            'per_page': per_page, 'pages': (total + per_page - 1) // per_page}
+
+
+def ip_query(args):
+    """Addresses matching the list filters, in address order (also used by CSV export)."""
     query = IP.query.join(Subnet)
-    if request.args.get('subnet_id', '').isdigit():
-        query = query.filter(IP.subnet_id == int(request.args['subnet_id']))
-    if request.args.get('status'):
-        query = query.filter(IP.status == request.args['status'])
-    search = request.args.get('search', '').strip()[:200]
+    if args.get('subnet_id', '').isdigit():
+        query = query.filter(IP.subnet_id == int(args['subnet_id']))
+    if args.get('status'):
+        query = query.filter(IP.status == args['status'])
+    if args.get('tag'):
+        query = tag_filter(query, IP, args['tag'])
+    if args.get('vlan_id', '').isdigit():
+        query = query.filter(Subnet.vlan_id == int(args['vlan_id']))
+    search = args.get('search', '').strip()[:200]
     if search:
         like = _like(search)
         query = query.filter(
             IP.address.ilike(like, escape='\\') | IP.hostname.ilike(like, escape='\\')
             | IP.fqdn.ilike(like, escape='\\') | IP.mac_address.ilike(like, escape='\\')
             | IP.description.ilike(like, escape='\\') | IP.owner.ilike(like, escape='\\')
+            | IP.tags.any(Tag.name.ilike(like, escape='\\'))
             | IP.device_type.ilike(like, escape='\\'))
-    page = _int_arg('page', 1, 1, 100000)
-    per_page = _int_arg('per_page', 100, 1, 500)
-    total = query.count()
-    items = (query.order_by(cast(IP.address, INET), IP.id)
-             .offset((page - 1) * per_page).limit(per_page).all())
-    return {'items': [ip.to_dict() for ip in items], 'total': total, 'page': page,
-            'per_page': per_page, 'pages': (total + per_page - 1) // per_page}
+    return query.order_by(cast(IP.address, INET), IP.id)
 
 
 @api_bp.get('/ips/<int:ip_id>', tags=[tag_ips])
@@ -484,7 +528,7 @@ def lookup(path: LookupPath):
 # Import / export
 # ---------------------------------------------------------------------------
 
-EXPORT_FORMAT = 2
+EXPORT_FORMAT = 3
 
 
 @api_bp.get('/export', tags=[tag_data])
@@ -493,20 +537,25 @@ def export_data():
     subnets = Subnet.query.order_by(Subnet.id).all()
     ips = defaultdict(list)
     for ip in IP.query.order_by(IP.id):
-        ips[ip.subnet_id].append({k: getattr(ip, k) for k in IP.FIELDS})
+        ips[ip.subnet_id].append({**{k: getattr(ip, k) for k in IP.FIELDS}, 'tags': [t.name for t in ip.tags]})
     out = []
     for s in subnets:
+        v = s.vlan_obj
         out.append({
-            'name': s.name, 'cidr': s.cidr, 'description': s.description, 'vlan': s.vlan,
+            'name': s.name, 'cidr': s.cidr, 'description': s.description,
+            'vlan': v.vid if v else None, 'vlan_site': v.site if v else None,
             'gateway': s.gateway, 'dns_primary': s.dns_primary, 'dns_secondary': s.dns_secondary,
             'location': s.location, 'environment': s.environment,
-            'tags': [t for t in (s.tags or '').split(',') if t],
+            'tags': [t.name for t in s.tags],
             'dhcp_ranges': [{'start': r.start_address, 'end': r.end_address,
                              'description': r.description} for r in s.dhcp_ranges],
             'ips': ips[s.id],
         })
+    vlans = [v.to_dict() for v in Vlan.query.order_by(Vlan.vid, Vlan.site)]
+    for v in vlans:
+        v.pop('id')
     response = jsonify({'format': EXPORT_FORMAT, 'version': VERSION,
-                        'exported_at': datetime.utcnow().isoformat(), 'subnets': out})
+                        'exported_at': datetime.utcnow().isoformat(), 'vlans': vlans, 'subnets': out})
     stamp = datetime.utcnow().strftime('%Y%m%d-%H%M')
     response.headers['Content-Disposition'] = f'attachment; filename=lattice-export-{stamp}.json'
     return response
@@ -529,11 +578,20 @@ def import_data():
         return {'error': 'The file contains no subnets'}, 400
 
     if mode == 'replace':
-        Discovery.query.delete()
-        IP.query.delete()
-        DhcpRange.query.delete()
-        Subnet.query.delete()
+        for model in (Discovery, IP, DhcpRange, Subnet, Vlan, Tag):
+            model.query.delete()
         db.session.flush()
+
+    # VLAN names and descriptions from format 3; numbers alone are enough otherwise
+    for raw in data.get('vlans') or []:
+        try:
+            vid, site = int(raw['vid']), str(raw.get('site') or '')
+        except (KeyError, TypeError, ValueError):
+            raise ValidationError('A VLAN in the file has no valid vid')
+        vlan = vlan_by_number(vid, site)
+        vlan.name = str(raw.get('name') or vlan.name)[:100]
+        vlan.description = raw.get('description') or vlan.description
+    db.session.flush()
 
     added_subnets = added_ips = added_ranges = 0
     for n, raw in enumerate(subnets, 1):

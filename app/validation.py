@@ -7,7 +7,7 @@ import ipaddress
 import re
 
 from app import db
-from app.models import IP_STATUSES, Subnet
+from app.models import IP_STATUSES, Subnet, Vlan
 
 MAX_TEXT = 255
 ENV_RE = re.compile(r'^[A-Za-z0-9 _.-]{1,50}$')
@@ -71,18 +71,14 @@ def subnet_fields(data, partial=False):
     for field in ('gateway', 'dns_primary', 'dns_secondary'):
         if field in data:
             out[field] = _optional_ip(data[field], field)
-    if 'vlan' in data:
-        vlan = data['vlan']
-        if vlan in (None, ''):
-            out['vlan'] = None
-        else:
-            try:
-                vlan = int(vlan)
-            except (TypeError, ValueError):
-                raise ValidationError('vlan must be a number')
-            if not 1 <= vlan <= 4094:
-                raise ValidationError('vlan must be between 1 and 4094')
-            out['vlan'] = vlan
+    # A VLAN by id, or by number for older clients and imports (found or created)
+    if 'vlan_id' in data:
+        out['_vlan_id'] = _optional_int(data['vlan_id'], 'vlan_id')
+    elif 'vlan' in data:
+        vid = _optional_int(data['vlan'], 'vlan')
+        if vid is not None and not 1 <= vid <= 4094:
+            raise ValidationError('vlan must be between 1 and 4094')
+        out['_vlan_vid'] = (vid, str(data.get('vlan_site') or '')) if vid is not None else None
     if 'environment' in data:
         env = _text(data['environment'], 'environment', 50)
         if env and not ENV_RE.match(env):
@@ -94,17 +90,38 @@ def subnet_fields(data, partial=False):
     if 'description' in data:
         out['description'] = _text(data['description'], 'description', 5000)
     if 'tags' in data:
-        tags = data['tags'] or []
-        if isinstance(tags, str):
-            tags = tags.split(',')
-        if not isinstance(tags, list):
-            raise ValidationError('tags must be a list')
-        tags = [_text(t, 'tag', 50) for t in tags]
-        out['tags'] = ','.join(t.replace(',', ' ') for t in tags if t) or None
+        out['_tags'] = tag_names(data['tags'])
     if 'scan_enabled' in data:
         value = data['scan_enabled']
         out['scan_enabled'] = None if value is None else bool(value)
     return out
+
+
+def _optional_int(value, field):
+    if value in (None, ''):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        raise ValidationError(f'{field} must be a number')
+
+
+def tag_names(value):
+    """Clean tag input: a list or comma/semicolon-separated text, at most 20."""
+    items = value or []
+    if isinstance(items, str):
+        items = re.split(r'[,;]', items)
+    if not isinstance(items, list):
+        raise ValidationError('tags must be a list')
+    names, seen = [], set()
+    for item in items:
+        name = _text(item, 'tag', 50)
+        if name and name.lower() not in seen:
+            seen.add(name.lower())
+            names.append(name)
+    if len(names) > 20:
+        raise ValidationError('At most 20 tags')
+    return names
 
 
 def check_subnet(subnet):
@@ -127,17 +144,6 @@ def _check_contents(subnet, net):
         if not (subnet.contains(r.start_address) and subnet.contains(r.end_address)):
             raise ValidationError(
                 f'DHCP range {r.start_address}-{r.end_address} would fall outside {subnet.cidr}')
-
-
-def overlap_warnings(subnet):
-    """Overlapping subnets are allowed (nesting is common) but worth pointing out."""
-    net = ipaddress.ip_network(subnet.cidr)
-    warnings = []
-    for other in Subnet.query.filter(Subnet.id != subnet.id).all():
-        other_net = other.network
-        if other_net.version == net.version and net.overlaps(other_net):
-            warnings.append(f'Overlaps with {other.name} ({other.cidr})')
-    return warnings
 
 
 def ip_fields(data, partial=False):
@@ -165,6 +171,8 @@ def ip_fields(data, partial=False):
     for field in ('description', 'notes'):
         if field in data:
             out[field] = _text(data[field], field, 5000)
+    if 'tags' in data:
+        out['_tags'] = tag_names(data['tags'])
     return out
 
 
@@ -194,7 +202,18 @@ def dhcp_range_fields(data, subnet, exclude_id=None):
 
 
 def apply(obj, fields):
+    """Set validated fields; tags and VLAN references resolve to their rows."""
+    from app.catalog import resolve_tags, vlan_by_number
     for key, value in fields.items():
-        setattr(obj, key, value)
+        if key == '_tags':
+            obj.tags = resolve_tags(value)
+        elif key == '_vlan_id':
+            if value is not None and not db.session.get(Vlan, value):
+                raise ValidationError('VLAN not found')
+            obj.vlan_id = value
+        elif key == '_vlan_vid':
+            obj.vlan_obj = vlan_by_number(*value) if value is not None else None
+        else:
+            setattr(obj, key, value)
     return obj
 

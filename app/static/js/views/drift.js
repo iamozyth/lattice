@@ -91,7 +91,7 @@ export async function render(root) {
   }
 
   mount(root,
-    pageHead('Drift', 'where the network and the documentation disagree'),
+    pageHead(null, 'Where the network and your documentation disagree.'),
     h('section.panel', {}, h('div.panel-head', {}, seg), body));
   draw();
 }
