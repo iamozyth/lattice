@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>lattice · sign in</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/app.css?v={{ version }}">
+  <script type="module" src="/static/js/login.js?v={{ version }}"></script>
+</head>
+<body>
+<div class="auth">
+  <div>
+    <div class="brand"><span class="dot"></span>lattice</div>
+    <div class="panel">
+      <form id="login" class="hidden">
+        <label class="field"><span>Username</span><input name="username" autocomplete="username" required autofocus></label>
+        <label class="field"><span>Password</span><input name="password" type="password" autocomplete="current-password" required></label>
+        <label class="check"><input type="checkbox" name="remember" checked> Keep me signed in</label>
+        <p class="error-box" id="login-error"></p>
+        <button class="primary" type="submit">Sign in</button>
+      </form>
+      <form id="setup" class="hidden">
+        <p class="lead">Create the first admin account.</p>
+        <label class="field"><span>Username</span><input name="username" autocomplete="username" minlength="3" required></label>
+        <label class="field"><span>Email</span><input name="email" type="email" autocomplete="email" required></label>
+        <label class="field"><span>Password</span><input name="password" type="password" autocomplete="new-password" minlength="8" required>
+          <div class="meter"><i id="meter"></i></div>
+          <span class="hint" id="meter-text">At least 8 characters</span></label>
+        <p class="error-box" id="setup-error"></p>
+        <button class="primary" type="submit">Create admin</button>
+      </form>
+    </div>
+  </div>
+</div>
+</body>
+</html>
