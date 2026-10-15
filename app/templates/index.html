@@ -11,46 +11,27 @@
 </head>
 <body>
 <svg class="hidden" aria-hidden="true">
-  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
-  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
-  <symbol id="i-radar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 12l6-6"/></symbol>
-  <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
-  <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></symbol>
-  <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
-  <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20zM12 10v4M12 17h.01"/></symbol>
-  <symbol id="i-plug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4"/></symbol>
-  <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></symbol>
-  <symbol id="i-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.6-4.6L4 8M4 4v4h4M4 13a8 8 0 0 0 14.6 4.6L20 16M20 20v-4h-4"/></symbol>
-  <symbol id="i-out" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></symbol>
 </svg>
 
-<div class="shell">
-  <header class="topbar">
-    <button class="ghost icon menu-toggle" data-action="toggle-nav" aria-label="Menu"><svg><use href="#i-menu"/></svg></button>
-    <a class="brand" href="#/subnets"><span class="dot"></span>lattice</a>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="#/subnets"><span class="dot"></span><h1>lattice</h1></a>
+    <nav id="nav" aria-label="Main">
+      <a href="#/subnets" data-nav="subnets">Subnets</a>
+      <a href="#/addresses" data-nav="addresses">Addresses</a>
+      <a href="#/drift" data-nav="drift">Drift <span class="count" id="drift-count"></span></a>
+      <a href="#/connectors" data-nav="connectors" data-role="admin">Connectors</a>
+      <a href="#/settings" data-nav="settings">Settings</a>
+    </nav>
     <form class="search" id="search-form" role="search">
-      <svg width="15" height="15"><use href="#i-search"/></svg>
-      <input id="search" type="search" placeholder="Search addresses, hostnames, MACs…" aria-label="Search" autocomplete="off">
-      <kbd>/</kbd>
+      <input id="search" type="search" placeholder="Search  /" aria-label="Search addresses, hostnames and MACs" autocomplete="off" spellcheck="false">
     </form>
-    <span class="spacer"></span>
     <span class="who" id="who"></span>
-    <button class="ghost icon" data-action="logout" aria-label="Log out" title="Log out"><svg><use href="#i-out"/></svg></button>
+    <button class="ghost" data-action="logout">Log out</button>
   </header>
-
-  <nav class="side" id="nav" aria-label="Main">
-    <a href="#/subnets" data-nav="subnets"><svg width="16" height="16"><use href="#i-grid"/></svg>Subnets</a>
-    <a href="#/addresses" data-nav="addresses"><svg width="16" height="16"><use href="#i-list"/></svg>Addresses</a>
-    <a href="#/drift" data-nav="drift"><svg width="16" height="16"><use href="#i-alert"/></svg>Drift<span class="count" id="drift-count"></span></a>
-    <a href="#/connectors" data-nav="connectors" data-role="admin"><svg width="16" height="16"><use href="#i-plug"/></svg>Connectors</a>
-    <a href="#/settings" data-nav="settings"><svg width="16" height="16"><use href="#i-gear"/></svg>Settings</a>
-    <span class="grow"></span>
-    <a href="/openapi/swagger" target="_blank" rel="noopener">API docs</a>
-    <span class="version">v{{ version }}</span>
-  </nav>
 
   <main id="view" tabindex="-1"></main>
 </div>

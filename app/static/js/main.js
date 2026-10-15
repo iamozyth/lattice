@@ -27,13 +27,12 @@ async function route() {
   const [re, load, nav] = match;
   const id = ++renderId;
   if (cleanup) { cleanup(); cleanup = null; }
-  $$('nav.side a[data-nav]').forEach((a) => {
+  $$('#nav a[data-nav]').forEach((a) => {
     if (a.dataset.nav === nav) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   });
-  $('#nav').classList.remove('open');
   if (nav !== 'addresses') $('#search').value = '';
-  mount(view, h('div.stack', {}, h('div.skeleton'), h('div.skeleton'), h('div.skeleton')));
+  mount(view, h('p.muted', {}, 'loading…'));
   try {
     const mod = await load();
     if (id !== renderId) return;
@@ -59,13 +58,12 @@ async function init() {
   if (!status.user) { location.href = '/login'; return; }
   state.user = status.user;
   state.version = status.version;
-  $('#who').textContent = `${state.user.username} · ${state.user.role}`;
+  $('#who').textContent = state.user.username;
   $$('[data-role]').forEach((el) => el.classList.toggle('hidden', !can(el.dataset.role)));
 
   document.addEventListener('click', async (e) => {
     const target = e.target.closest('[data-action]');
     if (!target) return;
-    if (target.dataset.action === 'toggle-nav') $('#nav').classList.toggle('open');
     if (target.dataset.action === 'logout') {
       await post('/api/auth/logout').catch(() => {});
       location.href = '/login';

@@ -1,12 +1,12 @@
 import { del, get, post, put } from '../api.js';
-import { busy, confirmDialog, dialog, field, h, icon, input, mount, select, toast } from '../dom.js';
+import { busy, confirmDialog, dialog, field, h, icon, input, mount, pageHead, select, toast } from '../dom.js';
 import { can, state } from '../state.js';
 
 export async function render(root) {
   const sections = [account()];
   if (can('admin')) sections.push(await users());
   sections.push(data(), about());
-  mount(root, h('div.page-head', {}, h('h1', {}, 'Settings')), h('div.stack', {}, sections));
+  mount(root, pageHead('Settings'), h('div.stack', {}, sections));
 }
 
 function account() {
@@ -26,7 +26,8 @@ function account() {
     field('Repeat new password', input('confirm', '', { type: 'password', autocomplete: 'new-password', minlength: 8, required: true }))),
   h('div', {}, h('button', { type: 'submit' }, 'Change password')));
   return h('section.panel', {},
-    h('div.panel-head', {}, h('h2', {}, 'Account'), h('span.muted', {}, `${state.user.username} · ${state.user.email} · ${state.user.role}`)),
+    h('div.panel-head', {}, h('h3', {}, 'Account')),
+    h('div.pad', { class: 'flush' }, h('span.muted', {}, `${state.user.username} · ${state.user.email} · ${state.user.role}`)),
     form);
 }
 
@@ -37,15 +38,15 @@ async function users() {
   async function load() {
     const { items } = await get('/api/auth/users');
     mount(panel,
-      h('div.panel-head', {}, h('h2', {}, 'Users'),
-        h('div.actions', {}, h('button.ghost', { onclick: () => edit() }, icon('plus'), 'Add user'))),
+      h('div.panel-head', {}, h('h3', {}, 'Users'),
+        h('div.actions', {}, h('button.ghost', { onclick: () => edit() }, 'Add user'))),
       h('div.table-wrap', {}, h('table', {}, h('tbody', {}, items.map((u) => h('tr', {},
         h('td', {}, h('strong', {}, u.username), u.id === state.user.id ? h('span.faint', {}, ' (you)') : null, h('div.faint', {}, u.email)),
-        h('td', {}, u.role, h('div.faint', {}, ROLE_HELP[u.role])),
+        h('td', { title: ROLE_HELP[u.role] }, u.role),
         h('td', {}, u.is_active ? h('span.status.s-in-use', {}, 'active') : h('span.status.s-deprecated', {}, 'disabled')),
-        h('td.actions.always', {}, u.id === state.user.id ? null : [
-          h('button.ghost.icon', { 'aria-label': `Edit ${u.username}`, onclick: () => edit(u) }, icon('edit')),
-          h('button.ghost.icon.danger', { 'aria-label': `Delete ${u.username}`, onclick: async () => {
+        h('td.actions', {}, u.id === state.user.id ? null : [
+          h('button.ghost.icon.hover', { 'aria-label': `Edit ${u.username}`, onclick: () => edit(u) }, icon('edit')),
+          h('button.ghost.icon.danger.hover', { 'aria-label': `Delete ${u.username}`, onclick: async () => {
             if (!(await confirmDialog(`Delete ${u.username}?`, 'They are signed out and can no longer log in.'))) return;
             await busy(null, async () => { await del(`/api/auth/users/${u.id}`); load(); });
           } }, icon('trash'))])))))));
@@ -90,7 +91,7 @@ function data() {
     });
   });
   return h('section.panel', {},
-    h('div.panel-head', {}, h('h2', {}, 'Data')),
+    h('div.panel-head', {}, h('h3', {}, 'Data')),
     h('div.pad.stack', {},
       h('div.row', {}, h('a.btn', { href: '/api/export', download: '' }, 'Export JSON'),
         h('span.muted', {}, 'Subnets, addresses and DHCP ranges. Use it as a backup.')),
@@ -100,16 +101,17 @@ function data() {
 function about() {
   const result = h('span.muted');
   return h('section.panel', {},
-    h('div.panel-head', {}, h('h2', {}, 'About')),
+    h('div.panel-head', {}, h('h3', {}, 'About')),
     h('div.pad.row', {},
-      h('span', {}, 'lattice ', h('span.mono', {}, state.version)),
+      h('span.mono', {}, `lattice ${state.version}`),
       h('a', { href: 'https://github.com/iamozyth/lattice', target: '_blank', rel: 'noopener' }, 'GitHub'),
       h('a', { href: '/openapi/swagger', target: '_blank', rel: 'noopener' }, 'API docs'),
       can('admin') ? h('button', { onclick: (e) => busy(e.currentTarget, async () => {
         const r = await get('/api/auth/updates');
         if (r.error) result.textContent = r.error;
         else if (r.update_available) mount(result, `${r.latest_version} is available · `, h('a', { href: r.release_url, target: '_blank', rel: 'noopener' }, 'release notes'));
-        else result.textContent = `You're on the latest version (${r.latest_version}).`;
+        else if (r.ahead) result.textContent = `This build is newer than the latest release (${r.latest_version}).`;
+        else result.textContent = 'Up to date.';
       }) }, 'Check for updates') : null,
       result));
 }

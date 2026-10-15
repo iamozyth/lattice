@@ -41,8 +41,8 @@ logger = logging.getLogger(__name__)
 
 db = SQLAlchemy()
 login_manager = LoginManager()
-limiter = Limiter(key_func=get_remote_address, default_limits=['300 per minute'],
-                  storage_uri='memory://')
+# Only the endpoints that need it are limited (login, setup, scans, imports)
+limiter = Limiter(key_func=get_remote_address, storage_uri='memory://')
 
 
 def _env_bool(name, default=False):

@@ -1,5 +1,5 @@
 import { get, post } from '../api.js';
-import { ago, busy, empty, h, mount, toast } from '../dom.js';
+import { ago, busy, empty, h, icon, mount, pageHead, toast } from '../dom.js';
 import { ipDialog } from '../forms.js';
 import { refreshDriftCount } from '../main.js';
 import { can } from '../state.js';
@@ -19,12 +19,12 @@ export async function render(root) {
     ['conflicts', 'Conflicts', data.counts.conflicts],
   ];
   let current = tabs.find((t) => t[2])?.[0] || 'undocumented';
-  const body = h('section.panel');
-  const seg = h('div.seg', { role: 'tablist' });
+  const body = h('div');
+  const seg = h('div.tabs', { role: 'tablist' });
 
   function draw() {
-    mount(seg, tabs.map(([key, label, n]) => h('button', { role: 'tab', 'aria-pressed': String(key === current),
-      'aria-selected': String(key === current), onclick: () => { current = key; draw(); } }, `${label} `, h('span.mono.muted', {}, n))));
+    mount(seg, tabs.map(([key, label, n]) => h('button', { type: 'button', role: 'tab',
+      'aria-selected': String(key === current), onclick: () => { current = key; draw(); } }, label, h('span.n', {}, n))));
     if (current === 'undocumented') drawUndocumented();
     if (current === 'offline') drawOffline();
     if (current === 'conflicts') drawConflicts();
@@ -36,25 +36,25 @@ export async function render(root) {
       return;
     }
     mount(body, h('div.table-wrap', {}, h('table', {},
-      h('thead', {}, h('tr', {}, ['Address', 'Hostname', 'MAC', 'Subnet', 'Last seen', 'Source', ''].map((t) => h('th', {}, t)))),
+      h('thead', {}, h('tr', {}, h('th', {}, 'Address'), h('th', {}, 'Hostname'), h('th.opt', {}, 'MAC'), h('th.opt', {}, 'Subnet'), h('th.opt', {}, 'Last seen'), h('th.opt', {}, 'Source'), h('th', {}, h('span.sr-only', {}, 'Actions')))),
       h('tbody', {}, data.undocumented.map((d) => h('tr', {},
         h('td.mono', {}, d.address),
-        h('td', {}, d.hostname || h('span.faint', {}, '—')),
-        h('td.mono.muted', {}, d.mac_address || '', d.vendor ? h('div.faint', {}, d.vendor) : null),
-        h('td', {}, h('a', { href: `#/subnets/${d.subnet_id}` }, d.subnet_name)),
-        h('td.muted', {}, ago(d.last_seen)),
-        h('td.muted', {}, d.source),
-        h('td.actions.always', {}, can('editor') ? [
+        h('td', {}, d.hostname || h('span.faint', {}, '—'), d.vendor ? h('span.sub', { class: 'mobile-only' }, d.vendor) : null),
+        h('td.mono.muted.opt', {}, d.mac_address || '', d.vendor ? h('span.sub', {}, d.vendor) : null),
+        h('td.opt', {}, h('a', { href: `#/subnets/${d.subnet_id}` }, d.subnet_name)),
+        h('td.muted.opt', {}, ago(d.last_seen)),
+        h('td.muted.opt', {}, d.source),
+        h('td.actions', {}, can('editor') ? [
           h('button', { onclick: async () => {
             const saved = await ipDialog({ address: d.address, hostname: d.hostname, mac_address: d.mac_address,
               manufacturer: d.vendor, status: 'in-use', subnet_id: d.subnet_id });
             if (saved) reload();
           } }, 'Document'),
-          h('button.ghost', { onclick: (e) => busy(e.currentTarget, async () => {
+          h('button.ghost.icon', { 'aria-label': `Dismiss ${d.address}`, title: 'Dismiss', onclick: (e) => busy(e.currentTarget, async () => {
             await post(`/api/discoveries/${d.id}/ignore`, { ignored: true });
             toast(`${d.address} dismissed`);
             reload();
-          }) }, 'Dismiss')] : null)))))));
+          }) }, icon('x'))] : null)))))));
   }
 
   function drawOffline() {
@@ -91,8 +91,7 @@ export async function render(root) {
   }
 
   mount(root,
-    h('div.page-head', {}, h('h1', {}, 'Drift'), h('span.sub', {}, 'Where the network and the documentation disagree')),
-    h('div.filters', {}, seg),
-    body);
+    pageHead('Drift', 'where the network and the documentation disagree'),
+    h('section.panel', {}, h('div.panel-head', {}, seg), body));
   draw();
 }

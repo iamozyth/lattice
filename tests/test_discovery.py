@@ -96,3 +96,14 @@ def test_scheduler_sweep_runs_in_app_context(app, editor, subnet, monkeypatch):
     scheduler.sweep_all(app)
     drift = editor.get('/api/drift').json
     assert [d['address'] for d in drift['undocumented']] == ['192.168.50.9']
+
+
+def test_update_check_knows_when_build_is_newer(monkeypatch):
+    from app import updates
+    monkeypatch.setattr(updates, 'latest_release', lambda: {'tag_name': 'v1.0.0-beta.1', 'html_url': 'x'})
+    r = updates.check_for_updates('1.0.0-beta.2')
+    assert r['ahead'] and not r['update_available']
+    r = updates.check_for_updates('1.0.0-beta.1')
+    assert not r['ahead'] and not r['update_available']
+    monkeypatch.setattr(updates, 'latest_release', lambda: {'tag_name': 'v1.0.0', 'html_url': 'x'})
+    assert updates.check_for_updates('1.0.0-beta.2')['update_available']

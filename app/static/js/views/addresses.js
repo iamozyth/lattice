@@ -1,5 +1,5 @@
 import { get } from '../api.js';
-import { $, h, icon, mount, status } from '../dom.js';
+import { $, h, mount, pageHead, status } from '../dom.js';
 import { can } from '../state.js';
 import { ipTable } from './iptable.js';
 
@@ -12,18 +12,17 @@ export async function render(root, _params, query) {
 
   const table = ipTable({ search, showSubnet: true });
   const lookup = h('div');
+  const tablePanel = h('section.panel');
 
   mount(root,
-    h('div.page-head', {}, h('h1', {}, search ? `Results for “${search}”` : 'Addresses'),
-      h('div.actions', {}, can('editor') ? h('button.primary', { onclick: () => table.add() }, icon('plus'), 'Add address') : null)),
-    lookup,
-    h('section.panel', {},
-      h('div.panel-head', {}, h('h2', {}, 'All subnets'), h('div.actions', {}, table.statusFilter)),
-      table.el));
+    pageHead(search ? `Results for “${search}”` : 'Addresses', null,
+      can('editor') ? h('button.primary', { onclick: () => table.add() }, 'Add address') : null),
+    lookup, tablePanel);
+  mount(tablePanel, h('div.panel-head', {}, h('h3', {}, search ? 'Matches' : 'All subnets'),
+    h('div.actions', {}, table.statusFilter)), table.el);
 
-  const tasks = [table.load()];
-  if (IP_RE.test(search)) tasks.push(showLookup(search, lookup, table));
-  await Promise.all(tasks);
+  const [data] = await Promise.all([table.load(), IP_RE.test(search) ? showLookup(search, lookup, table) : null]);
+  if (IP_RE.test(search) && !data.total && lookup.childElementCount) tablePanel.classList.add('hidden');
 }
 
 async function showLookup(address, target, table) {
@@ -36,5 +35,5 @@ async function showLookup(address, target, table) {
       : [h('span.mono', {}, r.address), ' belongs to ', h('a', { href: `#/subnets/${r.subnet.id}` }, r.subnet.name),
         ` (${r.subnet.cidr}) and is not documented. `,
         can('editor') ? h('button', { onclick: () => table.add({ address: r.address, subnet_id: r.subnet.id }) }, 'Document it') : null];
-  mount(target, h('div.panel.pad', { class: 'lookup' }, h('div.row', {}, text)));
+  mount(target, h('div.panel.pad.lookup', {}, h('div.row', {}, text)));
 }

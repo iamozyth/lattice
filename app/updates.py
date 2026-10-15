@@ -54,8 +54,8 @@ def latest_release():
 
 def check_for_updates(current_version):
     result = {'current_version': current_version, 'latest_version': None,
-              'update_available': False, 'release_url': None, 'published_at': None,
-              'error': None}
+              'update_available': False, 'ahead': False, 'release_url': None,
+              'published_at': None, 'error': None}
     try:
         release = latest_release()
     except (requests.RequestException, ValueError) as e:
@@ -71,5 +71,6 @@ def check_for_updates(current_version):
         release_url=release.get('html_url'),
         published_at=release.get('published_at'),
         update_available=parse_version(tag) > parse_version(current_version),
+        ahead=parse_version(tag) < parse_version(current_version),
     )
     return result

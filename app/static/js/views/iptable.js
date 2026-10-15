@@ -44,19 +44,19 @@ export function ipTable({ subnetId = null, search = '', showSubnet = false, onCh
     }
     const rows = data.items.map((ip) => h('tr', {},
       h('td.mono', {}, ip.address),
-      h('td', {}, ip.hostname || h('span.faint', {}, '—'), ip.description ? h('div.faint', {}, ip.description) : null),
-      showSubnet ? h('td', {}, h('a', { href: `#/subnets/${ip.subnet_id}` }, ip.subnet_name)) : null,
+      h('td', {}, ip.hostname || h('span.faint', {}, '—'), ip.description ? h('span.sub', { title: ip.description }, ip.description) : null),
+      showSubnet ? h('td.opt', {}, h('a', { href: `#/subnets/${ip.subnet_id}` }, ip.subnet_name)) : null,
       h('td', {}, status(ip.status)),
-      h('td.mono.muted', {}, ip.mac_address || ''),
-      h('td.muted', {}, ip.device_type || ip.manufacturer || ''),
-      h('td.muted', { title: ip.last_seen || 'never seen by a scan' }, ip.last_seen ? ago(ip.last_seen) : '—'),
+      h('td.mono.muted.opt', {}, ip.mac_address || ''),
+      h('td.muted.opt', {}, ip.device_type || ip.manufacturer || ''),
+      h('td.muted.opt', { title: ip.last_seen || 'never seen by a scan' }, ip.last_seen ? ago(ip.last_seen) : '—'),
       h('td.actions', {}, can('editor') ? [
-        h('button.ghost.icon', { 'aria-label': `Edit ${ip.address}`, onclick: () => edit(ip) }, icon('edit')),
-        h('button.ghost.icon.danger', { 'aria-label': `Delete ${ip.address}`, onclick: (e) => remove(ip, e.currentTarget) }, icon('trash')),
+        h('button.ghost.icon.hover', { 'aria-label': `Edit ${ip.address}`, onclick: () => edit(ip) }, icon('edit')),
+        h('button.ghost.icon.danger.hover', { 'aria-label': `Delete ${ip.address}`, onclick: (e) => remove(ip, e.currentTarget) }, icon('trash')),
       ] : null)));
     mount(body, h('div.table-wrap', {}, h('table', {},
-      h('thead', {}, h('tr', {}, h('th', {}, 'Address'), h('th', {}, 'Hostname'), showSubnet ? h('th', {}, 'Subnet') : null,
-        h('th', {}, 'Status'), h('th', {}, 'MAC'), h('th', {}, 'Device'), h('th', {}, 'Last seen'), h('th', {}, h('span.sr-only', {}, 'Actions')))),
+      h('thead', {}, h('tr', {}, h('th', {}, 'Address'), h('th', {}, 'Hostname'), showSubnet ? h('th.opt', {}, 'Subnet') : null,
+        h('th', {}, 'Status'), h('th.opt', {}, 'MAC'), h('th.opt', {}, 'Device'), h('th.opt', {}, 'Last seen'), h('th', {}, h('span.sr-only', {}, 'Actions')))),
       h('tbody', {}, rows))));
     mount(pager, h('span', {}, `${data.total} address${data.total === 1 ? '' : 'es'}`), h('span.grow'),
       data.pages > 1 ? [
